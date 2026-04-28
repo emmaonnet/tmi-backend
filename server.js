@@ -63,7 +63,7 @@ app.post("/upload", upload.single("file"), (req, res) => {
   }
 
   res.json({
-    url: `http://localhost:5000/uploads/${req.file.filename}`
+    url: ${req.protocol}://${req.get("host")}/uploads/${req.file.filename}`
   });
 });
 
