@@ -24,7 +24,10 @@ if (!fs.existsSync("uploads")) {
 
 
 // ================= MONGODB CONNECTION =================
-mongoose.connect(process.env.mongodb+srv://emmaonnet_db_user:Emma2s1984@cluster0.ces893e.mongodb.net/?appName=Cluster0)
+mongoose.connect(process.env.MONGO_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
+})
 .then(() => console.log("MongoDB connected"))
 .catch(err => {
   console.error("MongoDB error:", err);
@@ -47,10 +50,10 @@ const Media = mongoose.model("Media", MediaSchema);
 
 // ================= MULTER SETUP =================
 const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
+  destination: (req, file, cb) => {
     cb(null, "uploads/");
   },
-  filename: function (req, file, cb) {
+  filename: (req, file, cb) => {
     const uniqueName = Date.now() + "-" + file.originalname;
     cb(null, uniqueName);
   }
@@ -61,13 +64,13 @@ const upload = multer({ storage });
 
 // ================= ROUTES =================
 
-// 🔹 ROOT
+// ROOT
 app.get("/", (req, res) => {
   res.send("Backend is running 🚀");
 });
 
 
-// 🔹 UPLOAD IMAGE
+// UPLOAD IMAGE
 app.post("/upload", upload.single("file"), (req, res) => {
 
   if (!req.file) {
@@ -80,10 +83,9 @@ app.post("/upload", upload.single("file"), (req, res) => {
 });
 
 
-// 🔹 ADD MEDIA / SERMON
+// ADD MEDIA / SERMON
 app.post("/media", async (req, res) => {
   try {
-
     const { type, src, title, preacher, date } = req.body;
 
     if (!type || !src) {
@@ -109,7 +111,7 @@ app.post("/media", async (req, res) => {
 });
 
 
-// 🔹 GET ALL MEDIA
+// GET ALL MEDIA
 app.get("/media", async (req, res) => {
   try {
     const media = await Media.find().sort({ created: -1 });
@@ -120,7 +122,7 @@ app.get("/media", async (req, res) => {
 });
 
 
-// 🔹 DELETE MEDIA + FILE
+// DELETE MEDIA + FILE
 app.delete("/media/:id", async (req, res) => {
   try {
 
@@ -130,7 +132,6 @@ app.delete("/media/:id", async (req, res) => {
       return res.status(404).json({ error: "Media not found" });
     }
 
-    // delete uploaded image file if exists
     if (media.type === "image"&& media.src.includes("/uploads/")) {
 
       const filePath = path.join(
