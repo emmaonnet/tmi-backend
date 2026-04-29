@@ -17,7 +17,7 @@ app.use(express.json());
 app.use("/uploads", express.static("uploads"));
 
 
-// ================= CREATE UPLOADS FOLDER =================
+// ================= CREATE UPLOAD FOLDER =================
 if (!fs.existsSync("uploads")) {
   fs.mkdirSync("uploads");
 }
@@ -26,13 +26,19 @@ if (!fs.existsSync("uploads")) {
 // ================= MONGODB CONNECTION =================
 mongoose.connect("process.env.mongodb+srv://emmaonnet_db_user:Emma2s1984@cluster0.ces893e.mongodb.net/?appName=Cluster0")
 .then(() => console.log("MongoDB connected"))
-.catch(err => console.log(err));
+.catch(err => {
+  console.error("MongoDB error:", err);
+  process.exit(1);
+});
 
 
 // ================= MEDIA MODEL =================
 const MediaSchema = new mongoose.Schema({
   type: String,
   src: String,
+  title: String,
+  preacher: String,
+  date: String,
   created: { type: Date, default: Date.now }
 });
 
@@ -55,6 +61,12 @@ const upload = multer({ storage });
 
 // ================= ROUTES =================
 
+// 🔹 ROOT
+app.get("/", (req, res) => {
+  res.send("Backend is running 🚀");
+});
+
+
 // 🔹 UPLOAD IMAGE
 app.post("/upload", upload.single("file"), (req, res) => {
 
@@ -63,32 +75,36 @@ app.post("/upload", upload.single("file"), (req, res) => {
   }
 
   res.json({
-    url: ${req.protocol}://${req.get("host")}/uploads/${req.file.filename}`
+    url: `${req.protocol}://${req.get("host")}/uploads/${req.file.filename}`
   });
 });
 
 
-// 🔹 ADD MEDIA (SAVE TO DB)
+// 🔹 ADD MEDIA / SERMON
 app.post("/media", async (req, res) => {
   try {
 
-    const { type, src } = req.body;
+    const { type, src, title, preacher, date } = req.body;
 
     if (!type || !src) {
       return res.status(400).json({ error: "Type and src are required" });
     }
 
-    const newMedia = new Media({ type, src });
-    await newMedia.save();
-
-    res.status(201).json({
-      message: "Media saved successfully",
-      data: newMedia
+    const newMedia = new Media({
+      type,
+      src,
+      title,
+      preacher,
+      date
     });
 
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Server error" });
+    await newMedia.save();
+
+    res.status(201).json(newMedia);
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to save media" });
   }
 });
 
@@ -96,17 +112,15 @@ app.post("/media", async (req, res) => {
 // 🔹 GET ALL MEDIA
 app.get("/media", async (req, res) => {
   try {
-
     const media = await Media.find().sort({ created: -1 });
     res.json(media);
-
-  } catch (error) {
+  } catch (err) {
     res.status(500).json({ error: "Failed to fetch media" });
   }
 });
 
 
-// 🔹 DELETE MEDIA + IMAGE FILE
+// 🔹 DELETE MEDIA + FILE
 app.delete("/media/:id", async (req, res) => {
   try {
 
@@ -116,10 +130,13 @@ app.delete("/media/:id", async (req, res) => {
       return res.status(404).json({ error: "Media not found" });
     }
 
-    // delete image file if it's an uploaded image
+    // delete uploaded image file if exists
     if (media.type === "image"&& media.src.includes("/uploads/")) {
 
-      const filePath = path.join(__dirname, media.src.replace("http://localhost:5000/", ""));
+      const filePath = path.join(
+        __dirname,
+        media.src.replace(`${req.protocol}://${req.get("host")}/`, "")
+      );
 
       if (fs.existsSync(filePath)) {
         fs.unlinkSync(filePath);
@@ -128,10 +145,10 @@ app.delete("/media/:id", async (req, res) => {
 
     await Media.findByIdAndDelete(req.params.id);
 
-    res.json({ message: "Media deleted successfully" });
+    res.json({ message: "Deleted successfully" });
 
-  } catch (error) {
-    console.error(error);
+  } catch (err) {
+    console.error(err);
     res.status(500).json({ error: "Delete failed" });
   }
 });
@@ -141,5 +158,5 @@ app.delete("/media/:id", async (req, res) => {
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });
