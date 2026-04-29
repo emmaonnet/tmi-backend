@@ -24,7 +24,7 @@ if (!fs.existsSync("uploads")) {
 
 
 // ================= MONGODB CONNECTION =================
-mongoose.connect("process.env.mongodb+srv://emmaonnet_db_user:Emma2s1984@cluster0.ces893e.mongodb.net/?appName=Cluster0")
+mongoose.connect(process.env.mongodb+srv://emmaonnet_db_user:Emma2s1984@cluster0.ces893e.mongodb.net/?appName=Cluster0)
 .then(() => console.log("MongoDB connected"))
 .catch(err => {
   console.error("MongoDB error:", err);
