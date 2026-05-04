@@ -17,5 +17,5 @@
   }
 }
 "dependencies": {
-"cloudinary": "^1.x.x"
+"cloudinary": "^1.41.0"
 }
