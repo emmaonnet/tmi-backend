@@ -1,8 +1,9 @@
 // ================= IMPORTS =================
 const express = require("express");
 const mongoose = require("mongoose");
-const multer = require("multer");
 const cors = require("cors");
+const multer = require("multer");
+const cloudinary = require("cloudinary").v2;
 const fs = require("fs");
 const path = require("path");
 
@@ -13,9 +14,6 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// serve uploaded images
-app.use("/uploads", express.static("uploads"));
-
 
 // ================= CREATE UPLOAD FOLDER =================
 if (!fs.existsSync("uploads")) {
@@ -23,9 +21,16 @@ if (!fs.existsSync("uploads")) {
 }
 
 
+// ================= CLOUDINARY CONFIG =================
+cloudinary.config({
+  cloud_name: process.env.CLOUD_NAME,
+  api_key: process.env.API_KEY,
+  api_secret: process.env.API_SECRET
+});
+
+
 // ================= MONGODB CONNECTION =================
-mongoose.connect(process.env.MONGO_URI) 
-  
+mongoose.connect(process.env.MONGO_URI)
 .then(() => console.log("MongoDB connected"))
 .catch(err => {
   console.error("MongoDB error:", err);
@@ -52,8 +57,7 @@ const storage = multer.diskStorage({
     cb(null, "uploads/");
   },
   filename: (req, file, cb) => {
-    const uniqueName = Date.now() + "-" + file.originalname;
-    cb(null, uniqueName);
+    cb(null, Date.now() + path.extname(file.originalname));
   }
 });
 
@@ -68,29 +72,43 @@ app.get("/", (req, res) => {
 });
 
 
-// UPLOAD IMAGE
-app.post("/upload", upload.single("file"), (req, res) => {
+// 🔹 UPLOAD TO CLOUDINARY
+app.post("/upload", upload.single("file"), async (req, res) => {
+  try {
 
-  if (!req.file) {
-    return res.status(400).json({ error: "No file uploaded" });
+    if (!req.file) {
+      return res.status(400).json({ error: "No file uploaded" });
+    }
+
+    const result = await cloudinary.uploader.upload(req.file.path, {
+      folder: "church-media"
+    });
+
+    // delete temp file after upload
+    fs.unlinkSync(req.file.path);
+
+    res.json({
+      url: result.secure_url
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Upload failed" });
   }
-
-  res.json({
-    url: `${req.protocol}://${req.get("host")}/uploads/${req.file.filename}`
-  });
 });
 
 
-// ADD MEDIA / SERMON
+// 🔹 ADD MEDIA / SERMON
 app.post("/media", async (req, res) => {
   try {
+
     const { type, src, title, preacher, date } = req.body;
 
     if (!type || !src) {
-      return res.status(400).json({ error: "Type and src are required" });
+      return res.status(400).json({ error: "Type and src required" });
     }
 
-    const newMedia = new Media({
+    const media = new Media({
       type,
       src,
       title,
@@ -98,9 +116,9 @@ app.post("/media", async (req, res) => {
       date
     });
 
-    await newMedia.save();
+    await media.save();
 
-    res.status(201).json(newMedia);
+    res.status(201).json(media);
 
   } catch (err) {
     console.error(err);
@@ -109,7 +127,7 @@ app.post("/media", async (req, res) => {
 });
 
 
-// GET ALL MEDIA
+// 🔹 GET MEDIA
 app.get("/media", async (req, res) => {
   try {
     const media = await Media.find().sort({ created: -1 });
@@ -120,26 +138,14 @@ app.get("/media", async (req, res) => {
 });
 
 
-// DELETE MEDIA + FILE
+// 🔹 DELETE MEDIA
 app.delete("/media/:id", async (req, res) => {
   try {
 
     const media = await Media.findById(req.params.id);
 
     if (!media) {
-      return res.status(404).json({ error: "Media not found" });
-    }
-
-    if (media.type === "image"&& media.src.includes("/uploads/")) {
-
-      const filePath = path.join(
-        __dirname,
-        media.src.replace(`${req.protocol}://${req.get("host")}/`, "")
-      );
-
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
-      }
+      return res.status(404).json({ error: "Not found" });
     }
 
     await Media.findByIdAndDelete(req.params.id);
