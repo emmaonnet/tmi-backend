@@ -642,7 +642,7 @@ app.delete("/media/:id", async (req, res) => {
 
 
 // ================= START SERVER =================
-const PORT = process.env.PORT || 5000;
+
 
 
 
