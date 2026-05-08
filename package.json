@@ -29,3 +29,8 @@
 "offlineVideo": "xyz123",
 "replays": []
 }
+
+
+"dependencies": {
+  "dotenv": "^16.x.x"
+}
