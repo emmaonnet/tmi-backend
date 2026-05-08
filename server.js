@@ -12,10 +12,7 @@ const fs = require("fs");
 const path = require("path");
 
 
-const multer = require("multer");
 
-const cloudinary =
-require("cloudinary").v2;
 
 const {
 CloudinaryStorage
