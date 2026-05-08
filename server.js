@@ -5,12 +5,12 @@ console.log("MONGO URI:", process.env.MONGO_URI);
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
-<<<<<<< HEAD
+
 const multer = require("multer");
 const cloudinary = require("cloudinary").v2;
 const fs = require("fs");
 const path = require("path");
-=======
+
 
 const multer = require("multer");
 
@@ -22,7 +22,7 @@ CloudinaryStorage
 } = require(
 "multer-storage-cloudinary"
 );
->>>>>>> ca380b0b657e6b27d153798c2641daa47d46dd5d
+
 
 const app = express();
 
@@ -33,13 +33,13 @@ app.use(cors());
 
 app.use(express.json());
 
-<<<<<<< HEAD
+
 =======
 app.use(express.urlencoded({
 extended:true
 }));
 
->>>>>>> ca380b0b657e6b27d153798c2641daa47d46dd5d
+
 
 // ================= MONGODB =================
 
@@ -238,7 +238,7 @@ error:"Failed to upload sermon"
 
 }
 
-<<<<<<< HEAD
+
 // ================= CLOUDINARY CONFIG =================
 cloudinary.config({
   cloud_name: process.env.CLOUD_NAME,
@@ -257,8 +257,7 @@ mongoose.connect(process.env.MONGO_URI)
 .catch(err => {
   console.error("MongoDB error:", err);
   process.exit(1);
-=======
->>>>>>> ca380b0b657e6b27d153798c2641daa47d46dd5d
+
 });
 
 
@@ -290,7 +289,7 @@ error:"Failed to fetch sermons"
 
 }
 
-<<<<<<< HEAD
+
 
 // ================= MULTER SETUP =================
 const storage = multer.diskStorage({
@@ -300,8 +299,7 @@ const storage = multer.diskStorage({
   filename: (req, file, cb) => {
     cb(null, Date.now() + path.extname(file.originalname));
   }
-=======
->>>>>>> ca380b0b657e6b27d153798c2641daa47d46dd5d
+
 });
 
 
@@ -558,7 +556,7 @@ res.send("Testimony Missions Backend Running");
 });
 
 
-<<<<<<< HEAD
+
 // 🔹 UPLOAD TO CLOUDINARY
 app.post("/upload", upload.single("file"), async (req, res) => {
   try {
@@ -648,7 +646,7 @@ app.delete("/media/:id", async (req, res) => {
 
 // ================= START SERVER =================
 const PORT = process.env.PORT || 5000;
-=======
+
 
 
 // =====================================================
@@ -657,7 +655,7 @@ const PORT = process.env.PORT || 5000;
 
 const PORT =
 process.env.PORT || 5000;
->>>>>>> ca380b0b657e6b27d153798c2641daa47d46dd5d
+
 
 app.listen(PORT, () => {
 
