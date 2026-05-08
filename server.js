@@ -297,3 +297,30 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
+
+
+
+
+
+
+
+
+
+app.get("/api/sermons", async (req, res) => {
+
+  try {
+
+    const sermons =
+      await Sermon.find().sort({ createdAt: -1 });
+
+    res.json(sermons);
+
+  } catch (error) {
+
+    res.status(500).json({
+      error: "Failed to fetch sermons"
+    });
+
+  }
+
+});
