@@ -43,16 +43,16 @@ extended:true
 mongoose.connect(
 process.env.MONGODB_URI
 )
-.then(() => {
+.then(() => 
 
 console.log("MongoDB Connected");
 
-})
-.catch((err) => {
+)
+.catch(err => 
 
-console.log(err);
+console.log(err));
 
-});
+
 
 
 // ================= CLOUDINARY =================
