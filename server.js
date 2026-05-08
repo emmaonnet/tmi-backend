@@ -246,6 +246,10 @@ cloudinary.config({
 
 
 // ================= MONGODB CONNECTION =================
+
+console.log("MONGO URI:", process.env.MONGO_URI);
+
+
 mongoose.connect(process.env.MONGO_URI)
 .then(() => console.log("MongoDB connected"))
 .catch(err => {
