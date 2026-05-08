@@ -1,5 +1,7 @@
 require("dotenv").config();
 
+console.log("MONGO URI:", process.env.MONGO_URI);
+
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
@@ -247,7 +249,7 @@ cloudinary.config({
 
 // ================= MONGODB CONNECTION =================
 
-console.log("MONGO URI:", process.env.MONGO_URI);
+
 
 
 mongoose.connect(process.env.MONGO_URI)
