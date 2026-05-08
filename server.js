@@ -159,6 +159,138 @@ app.delete("/media/:id", async (req, res) => {
 });
 
 
+
+
+
+
+const axios = require("axios");
+
+
+// ================= LIVE API =================
+
+app.get("/api/live", async (req, res) => {
+
+  try {
+
+    const API_KEY = process.env.YOUTUBE_API_KEY;
+
+    const CHANNEL_ID =
+      process.env.YOUTUBE_CHANNEL_ID;
+
+
+    // SEARCH LIVE VIDEO
+
+    const youtubeURL =
+      `https://www.googleapis.com/youtube/v3/search?` +
+      `part=snippet&channelId=${CHANNEL_ID}` +
+      `&eventType=live&type=video&key=${API_KEY}`;
+
+
+    const response =
+      await axios.get(youtubeURL);
+
+    const items = response.data.items;
+
+
+    // ================= IF LIVE =================
+
+    if (items.length > 0) {
+
+      const liveVideo = items[0];
+
+      return res.json({
+
+        isLive: true,
+
+        videoId: liveVideo.id.videoId,
+
+        title: liveVideo.snippet.title,
+
+        description:
+          liveVideo.snippet.description,
+
+        viewers: Math.floor(
+          Math.random() * 500
+        ) + 100,
+
+        nextServiceDate: null,
+
+        offlineVideo: null,
+
+        replays: [
+          {
+            title: "Previous Sunday Service",
+            description:
+"Powerful worship and revelation.",
+
+            thumbnail:
+"https://img.youtube.com/vi/" +
+              liveVideo.id.videoId +
+"/hqdefault.jpg",
+
+            url:
+"https://youtube.com/watch?v=" +
+              liveVideo.id.videoId
+          }
+        ]
+
+      });
+
+    }
+
+
+    // ================= OFFLINE =================
+
+    res.json({
+
+      isLive: false,
+
+      videoId: null,
+
+      title: "Next Live Service",
+
+      description:
+"We are currently offline. Join the next service.",
+
+      viewers: 0,
+
+      nextServiceDate:
+"2026-05-15T09:00:00",
+
+      offlineVideo:
+"jfKfPfyJRdk",
+
+      replays: [
+        {
+          title:
+"The Generation Of Visible Glory",
+
+          description:
+"A powerful message on divine manifestation.",
+
+          thumbnail:
+"https://img.youtube.com/vi/jfKfPfyJRdk/hqdefault.jpg",
+
+          url:
+"https://youtube.com/watch?v=jfKfPfyJRdk"
+        }
+      ]
+
+    });
+
+  } catch (error) {
+
+    console.log(error);
+
+    res.status(500).json({
+      error: "Failed to fetch live status"
+    });
+
+  }
+
+});
+
+
 // ================= START SERVER =================
 const PORT = process.env.PORT || 5000;
 
