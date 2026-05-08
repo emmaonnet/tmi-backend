@@ -1,326 +1,531 @@
-// ================= IMPORTS =================
+require("dotenv").config();
+
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
+
 const multer = require("multer");
-const cloudinary = require("cloudinary").v2;
-const fs = require("fs");
-const path = require("path");
+
+const cloudinary =
+require("cloudinary").v2;
+
+const {
+CloudinaryStorage
+} = require(
+"multer-storage-cloudinary"
+);
 
 const app = express();
 
 
 // ================= MIDDLEWARE =================
+
 app.use(cors());
+
 app.use(express.json());
 
+app.use(express.urlencoded({
+extended:true
+}));
 
-// ================= CREATE UPLOAD FOLDER =================
-if (!fs.existsSync("uploads")) {
-  fs.mkdirSync("uploads");
+
+// ================= MONGODB =================
+
+mongoose.connect(
+process.env.MONGODB_URI
+)
+.then(() => {
+
+console.log("MongoDB Connected");
+
+})
+.catch((err) => {
+
+console.log(err);
+
+});
+
+
+// ================= CLOUDINARY =================
+
+cloudinary.config({
+
+cloud_name:
+process.env.CLOUDINARY_NAME,
+
+api_key:
+process.env.CLOUDINARY_KEY,
+
+api_secret:
+process.env.CLOUDINARY_SECRET
+
+});
+
+
+// ================= CLOUDINARY STORAGE =================
+
+const storage =
+new CloudinaryStorage({
+
+cloudinary,
+
+params: async (req, file) => ({
+
+folder: "testimony-missions",
+
+resource_type: "auto"
+
+})
+
+});
+
+const upload =
+multer({ storage });
+
+
+// ================= MODELS =================
+
+
+// ---------- SERMON MODEL ----------
+
+const sermonSchema =
+new mongoose.Schema({
+
+title:String,
+
+description:String,
+
+category:String,
+
+duration:String,
+
+videoUrl:String,
+
+thumbnail:String
+
+},{
+timestamps:true
+});
+
+const Sermon =
+mongoose.model(
+"Sermon",
+sermonSchema
+);
+
+
+// ---------- MEDIA MODEL ----------
+
+const mediaSchema =
+new mongoose.Schema({
+
+title:String,
+
+description:String,
+
+type:String,
+
+url:String
+
+},{
+timestamps:true
+});
+
+const Media =
+mongoose.model(
+"Media",
+mediaSchema
+);
+
+
+// ---------- LIVE SETTINGS MODEL ----------
+
+const liveSchema =
+new mongoose.Schema({
+
+title:String,
+
+description:String,
+
+nextServiceDate:String,
+
+offlineVideo:String
+
+});
+
+const LiveSettings =
+mongoose.model(
+"LiveSettings",
+liveSchema
+);
+
+
+
+// =====================================================
+// ================= SERMON ROUTES =====================
+// =====================================================
+
+
+// ---------- UPLOAD SERMON ----------
+
+app.post(
+"/api/sermons",
+upload.single("thumbnail"),
+async (req, res) => {
+
+try{
+
+if(!req.file){
+
+return res.status(400).json({
+error:"Thumbnail required"
+});
+
 }
 
+const sermon =
+new Sermon({
 
-// ================= CLOUDINARY CONFIG =================
-cloudinary.config({
-  cloud_name: process.env.CLOUD_NAME,
-  api_key: process.env.API_KEY,
-  api_secret: process.env.API_SECRET
+title:req.body.title,
+
+description:req.body.description,
+
+category:req.body.category,
+
+duration:req.body.duration,
+
+videoUrl:req.body.videoUrl,
+
+thumbnail:req.file.path
+
+});
+
+await sermon.save();
+
+res.json({
+
+success:true,
+
+message:"Sermon uploaded",
+
+sermon
+
+});
+
+}catch(error){
+
+console.log(error);
+
+res.status(500).json({
+
+success:false,
+
+error:"Failed to upload sermon"
+
+});
+
+}
+
 });
 
 
-// ================= MONGODB CONNECTION =================
-mongoose.connect(process.env.MONGO_URI)
-.then(() => console.log("MongoDB connected"))
-.catch(err => {
-  console.error("MongoDB error:", err);
-  process.exit(1);
+// ---------- GET SERMONS ----------
+
+app.get(
+"/api/sermons",
+async (req, res) => {
+
+try{
+
+const sermons =
+await Sermon.find()
+.sort({ createdAt:-1 });
+
+res.json(sermons);
+
+}catch(error){
+
+console.log(error);
+
+res.status(500).json({
+
+success:false,
+
+error:"Failed to fetch sermons"
+
+});
+
+}
+
 });
 
 
-// ================= MEDIA MODEL =================
-const MediaSchema = new mongoose.Schema({
-  type: String,
-  src: String,
-  title: String,
-  preacher: String,
-  date: String,
-  created: { type: Date, default: Date.now }
+
+
+// =====================================================
+// ================= MEDIA ROUTES ======================
+// =====================================================
+
+
+// ---------- UPLOAD MEDIA ----------
+
+app.post(
+"/api/media",
+upload.single("file"),
+async (req, res) => {
+
+try{
+
+if(!req.file){
+
+return res.status(400).json({
+error:"Media file required"
 });
 
-const Media = mongoose.model("Media", MediaSchema);
+}
 
+const media =
+new Media({
 
-// ================= MULTER SETUP =================
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, "uploads/");
-  },
-  filename: (req, file, cb) => {
-    cb(null, Date.now() + path.extname(file.originalname));
-  }
+title:req.body.title,
+
+description:req.body.description,
+
+type:req.body.type,
+
+url:req.file.path
+
 });
 
-const upload = multer({ storage });
+await media.save();
+
+res.json({
+
+success:true,
+
+message:"Media uploaded",
+
+media
+
+});
+
+}catch(error){
+
+console.log(error);
+
+res.status(500).json({
+
+success:false,
+
+error:"Failed to upload media"
+
+});
+
+}
+
+});
 
 
-// ================= ROUTES =================
+// ---------- GET MEDIA ----------
 
-// ROOT
+app.get(
+"/api/media",
+async (req, res) => {
+
+try{
+
+const media =
+await Media.find()
+.sort({ createdAt:-1 });
+
+res.json(media);
+
+}catch(error){
+
+console.log(error);
+
+res.status(500).json({
+
+success:false,
+
+error:"Failed to fetch media"
+
+});
+
+}
+
+});
+
+
+
+
+// =====================================================
+// ================= LIVE SETTINGS =====================
+// =====================================================
+
+
+// ---------- SAVE LIVE SETTINGS ----------
+
+app.post(
+"/api/live-settings",
+async (req, res) => {
+
+try{
+
+await LiveSettings.deleteMany();
+
+const live =
+new LiveSettings({
+
+title:req.body.title,
+
+description:req.body.description,
+
+nextServiceDate:
+req.body.nextServiceDate,
+
+offlineVideo:
+req.body.offlineVideo
+
+});
+
+await live.save();
+
+res.json({
+
+success:true,
+
+message:"Live settings updated"
+
+});
+
+}catch(error){
+
+console.log(error);
+
+res.status(500).json({
+
+success:false,
+
+error:"Failed to save live settings"
+
+});
+
+}
+
+});
+
+
+// ---------- GET LIVE SETTINGS ----------
+
+app.get(
+"/api/live-settings",
+async (req, res) => {
+
+try{
+
+const settings =
+await LiveSettings.findOne();
+
+res.json(settings);
+
+}catch(error){
+
+console.log(error);
+
+res.status(500).json({
+
+success:false,
+
+error:"Failed to fetch settings"
+
+});
+
+}
+
+});
+
+
+
+
+// =====================================================
+// ================= LIVE STATUS =======================
+// =====================================================
+
+
+// This can later connect directly
+// to YouTube Live API
+
+app.get(
+"/api/live",
+async (req, res) => {
+
+try{
+
+const settings =
+await LiveSettings.findOne();
+
+res.json({
+
+isLive:false,
+
+title:
+settings?.title || "",
+
+description:
+settings?.description || "",
+
+nextServiceDate:
+settings?.nextServiceDate || "",
+
+offlineVideo:
+settings?.offlineVideo || ""
+
+});
+
+}catch(error){
+
+console.log(error);
+
+res.status(500).json({
+
+success:false,
+
+error:"Failed to fetch live data"
+
+});
+
+}
+
+});
+
+
+
+
+// =====================================================
+// ================= ROOT ==============================
+// =====================================================
+
 app.get("/", (req, res) => {
-  res.send("Backend is running 🚀");
-});
 
+res.send("Testimony Missions Backend Running");
 
-// 🔹 UPLOAD TO CLOUDINARY
-app.post("/upload", upload.single("file"), async (req, res) => {
-  try {
-
-    if (!req.file) {
-      return res.status(400).json({ error: "No file uploaded" });
-    }
-
-    const result = await cloudinary.uploader.upload(req.file.path, {
-      folder: "church-media"
-    });
-
-    // delete temp file after upload
-    fs.unlinkSync(req.file.path);
-
-    res.json({
-      url: result.secure_url
-    });
-
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Upload failed" });
-  }
-});
-
-
-// 🔹 ADD MEDIA / SERMON
-app.post("/media", async (req, res) => {
-  try {
-
-    const { type, src, title, preacher, date } = req.body;
-
-    if (!type || !src) {
-      return res.status(400).json({ error: "Type and src required" });
-    }
-
-    const media = new Media({
-      type,
-      src,
-      title,
-      preacher,
-      date
-    });
-
-    await media.save();
-
-    res.status(201).json(media);
-
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Failed to save media" });
-  }
-});
-
-
-// 🔹 GET MEDIA
-app.get("/media", async (req, res) => {
-  try {
-    const media = await Media.find().sort({ created: -1 });
-    res.json(media);
-  } catch (err) {
-    res.status(500).json({ error: "Failed to fetch media" });
-  }
-});
-
-
-// 🔹 DELETE MEDIA
-app.delete("/media/:id", async (req, res) => {
-  try {
-
-    const media = await Media.findById(req.params.id);
-
-    if (!media) {
-      return res.status(404).json({ error: "Not found" });
-    }
-
-    await Media.findByIdAndDelete(req.params.id);
-
-    res.json({ message: "Deleted successfully" });
-
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Delete failed" });
-  }
 });
 
 
 
 
+// =====================================================
+// ================= PORT ==============================
+// =====================================================
 
-
-const axios = require("axios");
-
-
-// ================= LIVE API =================
-
-app.get("/api/live", async (req, res) => {
-
-  try {
-
-    const API_KEY = process.env.YOUTUBE_API_KEY;
-
-    const CHANNEL_ID =
-      process.env.YOUTUBE_CHANNEL_ID;
-
-
-    // SEARCH LIVE VIDEO
-
-    const youtubeURL =
-      `https://www.googleapis.com/youtube/v3/search?` +
-      `part=snippet&channelId=${CHANNEL_ID}` +
-      `&eventType=live&type=video&key=${API_KEY}`;
-
-
-    const response =
-      await axios.get(youtubeURL);
-
-    const items = response.data.items;
-
-
-    // ================= IF LIVE =================
-
-    if (items.length > 0) {
-
-      const liveVideo = items[0];
-
-      return res.json({
-
-        isLive: true,
-
-        videoId: liveVideo.id.videoId,
-
-        title: liveVideo.snippet.title,
-
-        description:
-          liveVideo.snippet.description,
-
-        viewers: Math.floor(
-          Math.random() * 500
-        ) + 100,
-
-        nextServiceDate: null,
-
-        offlineVideo: null,
-
-        replays: [
-          {
-            title: "Previous Sunday Service",
-            description:
-"Powerful worship and revelation.",
-
-            thumbnail:
-"https://img.youtube.com/vi/" +
-              liveVideo.id.videoId +
-"/hqdefault.jpg",
-
-            url:
-"https://youtube.com/watch?v=" +
-              liveVideo.id.videoId
-          }
-        ]
-
-      });
-
-    }
-
-
-    // ================= OFFLINE =================
-
-    res.json({
-
-      isLive: false,
-
-      videoId: null,
-
-      title: "Next Live Service",
-
-      description:
-"We are currently offline. Join the next service.",
-
-      viewers: 0,
-
-      nextServiceDate:
-"2026-05-15T09:00:00",
-
-      offlineVideo:
-"jfKfPfyJRdk",
-
-      replays: [
-        {
-          title:
-"The Generation Of Visible Glory",
-
-          description:
-"A powerful message on divine manifestation.",
-
-          thumbnail:
-"https://img.youtube.com/vi/jfKfPfyJRdk/hqdefault.jpg",
-
-          url:
-"https://youtube.com/watch?v=jfKfPfyJRdk"
-        }
-      ]
-
-    });
-
-  } catch (error) {
-
-    console.log(error);
-
-    res.status(500).json({
-      error: "Failed to fetch live status"
-    });
-
-  }
-
-});
-
-
-// ================= START SERVER =================
-const PORT = process.env.PORT || 5000;
+const PORT =
+process.env.PORT || 5000;
 
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
 
-
-
-
-
-
-
-
-
-app.get("/api/sermons", async (req, res) => {
-
-  try {
-
-    const sermons =
-      await Sermon.find().sort({ createdAt: -1 });
-
-    res.json(sermons);
-
-  } catch (error) {
-
-    res.status(500).json({
-      error: "Failed to fetch sermons"
-    });
-
-  }
+console.log(
+`Server running on port ${PORT}`
+);
 
 });
