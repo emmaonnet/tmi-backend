@@ -19,13 +19,3 @@
 }
 
 
-{
-"isLive": true,
-"videoId": "abcd1234",
-"title": "Sunday Worship Experience",
-"description": "Join us live now",
-"viewers": 320,
-"nextServiceDate": "2026-05-12T09:00:00",
-"offlineVideo": "xyz123",
-"replays": []
-}
