@@ -1,41 +1,24 @@
 {
-"name": "testimony-missions",
-"version": "1.0.0",
-"description": "Full church website backend with admin dashboard, sermons, media gallery, live streaming and index integration",
-"main": "server.js",
-"type": "commonjs",
-"scripts": {
-"start": "node server.js",
-"dev": "nodemon server.js"
+  "name": "testimony-missions",
+  "version": "1.0.0",
+  "description": "Church website backend",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
   },
-"keywords": [
-"church",
-"ministry",
-"sermons",
-"media",
-"live-stream",
-"cloudinary",
-"mongodb",
-"render",
-"express",
-"admin-dashboard"
-  ],
-"author": "Testimony Missions",
-"license": "ISC",
-"dependencies": {
-"cloudinary": "^2.5.1",
-"cors": "^2.8.5",
-"dotenv": "^16.4.5",
-"express": "^4.21.0",
-"mongoose": "^8.7.1",
-"multer": "^1.4.5-lts.1",
-"multer-storage-cloudinary": "^4.0.0",
-"path": "^0.12.7"
+  "author": "Testimony Missions",
+  "license": "ISC",
+  "dependencies": {
+    "cloudinary": "^1.41.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "mongoose": "^8.5.3",
+    "multer": "^1.4.5-lts.1",
+    "multer-storage-cloudinary": "^4.0.0"
   },
-"devDependencies": {
-"nodemon": "^3.1.4"
-  },
-"engines": {
-"node": ">=18.0.0"
+  "devDependencies": {
+    "nodemon": "^3.1.4"
   }
 }
