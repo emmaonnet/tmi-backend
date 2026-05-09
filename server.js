@@ -768,3 +768,249 @@ console.log(
 );
 
 });
+
+
+
+
+
+
+
+// ===================== BLOG MODEL ===========================
+
+
+const blogSchema =
+new mongoose.Schema({
+
+title:String,
+
+description:String,
+
+content:String,
+
+image:String
+
+},{
+timestamps:true
+});
+
+const Blog =
+mongoose.model(
+"Blog",
+blogSchema
+);
+
+
+// ===================== ANNOUNCEMENT MODEL ===========================
+
+const announcementSchema =
+new mongoose.Schema({
+
+title:String,
+
+message:String
+
+},{
+timestamps:true
+});
+
+const Announcement =
+mongoose.model(
+"Announcement",
+announcementSchema
+);
+
+
+// ===================== UPDATE MEDIA ROUTE ===========================
+app.put(
+"/api/media/:id",
+async(req,res)=>{
+
+try{
+
+const updated =
+await Media.findByIdAndUpdate(
+
+req.params.id,
+
+{
+title:req.body.title,
+description:req.body.description
+},
+
+{new:true}
+
+);
+
+res.json(updated);
+
+}catch(error){
+
+res.status(500).json({
+error:"Update failed"
+});
+
+}
+
+});
+
+
+// =====================BLOG ROUTE ===========================
+
+app.post(
+"/api/blogs",
+upload.single("image"),
+async(req,res)=>{
+
+try{
+
+const result =
+await cloudinary.uploader.upload(
+req.file.path,
+{
+folder:"blogs"
+}
+);
+
+const blog =
+new Blog({
+
+title:req.body.title,
+
+description:req.body.description,
+
+content:req.body.content,
+
+image:result.secure_url
+
+});
+
+await blog.save();
+
+res.json(blog);
+
+}catch(error){
+
+res.status(500).json({
+error:"Blog upload failed"
+});
+
+}
+
+});
+
+
+app.get(
+"/api/blogs",
+async(req,res)=>{
+
+const blogs =
+await Blog.find()
+.sort({createdAt:-1});
+
+res.json(blogs);
+
+});
+
+
+app.delete(
+"/api/blogs/:id",
+async(req,res)=>{
+
+await Blog.findByIdAndDelete(
+req.params.id
+);
+
+res.json({
+success:true
+});
+
+});
+
+// =====================ANNOUNCEMENT ROUTE ===========================
+
+app.post(
+"/api/announcements",
+async(req,res)=>{
+
+const announcement =
+new Announcement({
+
+title:req.body.title,
+
+message:req.body.message
+
+});
+
+await announcement.save();
+
+res.json(announcement);
+
+});
+
+
+app.get(
+"/api/announcements",
+async(req,res)=>{
+
+const announcements =
+await Announcement.find()
+.sort({createdAt:-1});
+
+res.json(announcements);
+
+});
+
+
+app.delete(
+"/api/announcements/:id",
+async(req,res)=>{
+
+await Announcement.findByIdAndDelete(
+req.params.id
+);
+
+res.json({
+success:true
+});
+
+});
+
+// =====================LIVE SETTING ROUTE ===========================
+
+app.put(
+"/api/live-settings",
+async(req,res)=>{
+
+try{
+
+let settings =
+await LiveSettings.findOne();
+
+if(!settings){
+
+settings =
+new LiveSettings(req.body);
+
+}else{
+
+Object.assign(
+settings,
+req.body
+);
+
+}
+
+await settings.save();
+
+res.json(settings);
+
+}catch(error){
+
+res.status(500).json({
+error:"Live update failed"
+});
+
+}
+
+});
+
