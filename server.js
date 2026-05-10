@@ -970,8 +970,7 @@ blogSchema);
 
 /* =========================   BLOG ROUTES========================= */
 
-const Blog =
-require("./models/Blog");
+
 
 
 /* GET BLOGS */
