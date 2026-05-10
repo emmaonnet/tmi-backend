@@ -363,8 +363,10 @@ error:"Delete failed"
 
 app.post(
 "/api/media",
+
 upload.single("file"),
-async (req, res) => {
+
+async(req,res)=>{
 
 try{
 
@@ -376,14 +378,20 @@ error:"No file uploaded"
 
 }
 
+
+/* CLOUDINARY */
+
 const result =
 await cloudinary.uploader.upload(
 req.file.path,
 {
 resource_type:"auto",
-folder:"testimony-missions"
+folder:"media"
 }
 );
+
+
+/* SAVE TO DATABASE */
 
 const media =
 new Media({
@@ -400,11 +408,13 @@ url:result.secure_url
 
 await media.save();
 
-res.json({
 
-success:true,
+/* SUCCESS */
 
-message:"Media uploaded",
+res.status(201).json({
+
+message:
+"Media uploaded successfully",
 
 media
 
@@ -415,13 +425,15 @@ media
 console.log(error);
 
 res.status(500).json({
-error:"Upload failed"
+
+error:
+"Media upload failed"
+
 });
 
 }
 
 });
-
 
 
 
