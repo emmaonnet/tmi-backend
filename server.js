@@ -986,7 +986,7 @@ error:"No image uploaded"
 }
 
 
-/* CLOUDINARY UPLOAD */
+/* UPLOAD TO CLOUDINARY */
 
 const result =
 await cloudinary.uploader.upload(
@@ -1004,22 +1004,17 @@ new Blog({
 
 title:req.body.title,
 
-description:
-req.body.description,
+description:req.body.description,
 
-content:
-req.body.content,
+content:req.body.content,
 
-image:
-result.secure_url
+image:result.secure_url
 
 });
 
 
 await blog.save();
 
-
-/* RESPONSE */
 
 res.status(201).json({
 
@@ -1044,6 +1039,7 @@ error:
 }
 
 });
+
 
 
 
