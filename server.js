@@ -775,30 +775,6 @@ console.log(
 
 
 
-// ===================== BLOG MODEL ===========================
-
-
-const blogSchema =
-new mongoose.Schema({
-
-title:String,
-
-description:String,
-
-content:String,
-
-image:String
-
-},{
-timestamps:true
-});
-
-const Blog =
-mongoose.model(
-"Blog",
-blogSchema
-);
-
 
 // ===================== ANNOUNCEMENT MODEL ===========================
 
@@ -853,83 +829,6 @@ error:"Update failed"
 
 });
 
-
-// =====================BLOG ROUTE ===========================
-
-app.post(
-"/api/blogs",
-upload.single("image"),
-async(req,res)=>{
-
-try{
-
-const result =
-await cloudinary.uploader.upload(
-req.file.path,
-{
-folder:"blogs"
-}
-);
-
-const blog =
-new Blog({
-
-title:req.body.title,
-
-description:req.body.description,
-
-content:req.body.content,
-
-image:result.secure_url
-
-});
-
-await blog.save();
-
-res.json(blog);
-
-}catch(error){
-
-res.status(500).json({
-error:"Blog upload failed"
-});
-
-}
-
-});
-
-
-app.get(
-"/api/blogs",
-async(req,res)=>{
-
-  try{
-const blogs =
-await Blog.find()
-.sort({createdAt:-1});
-
-res.json(blogs);
-  }catch(error){
-    res.status(500).json({
-      error:"Failed to fetch blogs"
-    });
-  }
-});
-
-
-app.delete(
-"/api/blogs/:id",
-async(req,res)=>{
-
-await Blog.findByIdAndDelete(
-req.params.id
-);
-
-res.json({
-success:true
-});
-
-});
 
 // =====================ANNOUNCEMENT ROUTE ===========================
 
@@ -1019,3 +918,312 @@ error:"Live update failed"
 
 });
 
+/* =========================================    BLOG MODEL ========================================= */
+
+const blogSchema =
+new mongoose.Schema({
+
+title:{
+type:String,
+required:true
+},
+
+description:{
+type:String,
+default:""
+},
+
+content:{
+type:String,
+default:""
+},
+
+image:{
+type:String,
+required:true
+}
+
+},{
+timestamps:true
+});
+
+const Blog =
+mongoose.model(
+"Blog",
+blogSchema);
+
+
+
+/* =========================================    BLOG UPLOAD========================================= */
+
+app.post(
+"/api/blogs",
+
+upload.single("image"),
+
+async(req,res)=>{
+
+try{
+
+if(!req.file){
+
+return res.status(400).json({
+error:"No image uploaded"
+});
+
+}
+
+
+/* CLOUDINARY UPLOAD */
+
+const result =
+await cloudinary.uploader.upload(
+req.file.path,
+{
+folder:"blogs"
+}
+);
+
+
+/* SAVE BLOG */
+
+const blog =
+new Blog({
+
+title:req.body.title,
+
+description:
+req.body.description,
+
+content:
+req.body.content,
+
+image:
+result.secure_url
+
+});
+
+
+await blog.save();
+
+
+/* RESPONSE */
+
+res.status(201).json({
+
+message:
+"Blog uploaded successfully",
+
+blog
+
+});
+
+}catch(error){
+
+console.log(error);
+
+res.status(500).json({
+
+error:
+"Blog upload failed"
+
+});
+
+}
+
+});
+
+
+
+/* =========================================    GET ALL BLOGS========================================= */
+
+app.get(
+"/api/blogs",
+
+async(req,res)=>{
+
+try{
+
+const blogs =
+await Blog.find()
+.sort({createdAt:-1});
+
+res.json(blogs);
+
+}catch(error){
+
+console.log(error);
+
+res.status(500).json({
+
+error:
+"Failed to fetch blogs"
+
+});
+
+}
+
+});
+
+
+
+/* =========================================    GET SINGLE BLOG========================================= */
+
+app.get(
+"/api/blogs/:id",
+
+async(req,res)=>{
+
+try{
+
+const blog =
+await Blog.findById(
+req.params.id
+);
+
+if(!blog){
+
+return res.status(404).json({
+
+error:
+"Blog not found"
+
+});
+
+}
+
+res.json(blog);
+
+}catch(error){
+
+console.log(error);
+
+res.status(500).json({
+
+error:
+"Failed to fetch blog"
+
+});
+
+}
+
+});
+
+
+
+/* =========================================    UPDATE BLOG========================================= */
+
+app.put(
+"/api/blogs/:id",
+
+async(req,res)=>{
+
+try{
+
+const updatedBlog =
+await Blog.findByIdAndUpdate(
+
+req.params.id,
+
+{
+title:req.body.title,
+
+description:
+req.body.description,
+
+content:
+req.body.content
+
+},
+
+{new:true}
+
+);
+
+
+if(!updatedBlog){
+
+return res.status(404).json({
+
+error:
+"Blog not found"
+
+});
+
+}
+
+
+res.json({
+
+message:
+"Blog updated",
+
+updatedBlog
+
+});
+
+}catch(error){
+
+console.log(error);
+
+res.status(500).json({
+
+error:
+"Update failed"
+
+});
+
+}
+
+});
+
+
+
+/* =========================================     DELETE BLOG========================================= */
+
+app.delete(
+"/api/blogs/:id",
+
+async(req,res)=>{
+
+try{
+
+const deletedBlog =
+await Blog.findByIdAndDelete(
+req.params.id
+);
+
+
+if(!deletedBlog){
+
+return res.status(404).json({
+
+error:
+"Blog not found"
+
+});
+
+}
+
+
+res.json({
+
+message:
+"Blog deleted successfully"
+
+});
+
+}catch(error){
+
+console.log(error);
+
+res.status(500).json({
+
+error:
+"Delete failed"
+
+});
+
+}
+
+});
