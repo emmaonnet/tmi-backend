@@ -903,12 +903,17 @@ app.get(
 "/api/blogs",
 async(req,res)=>{
 
+  try{
 const blogs =
 await Blog.find()
 .sort({createdAt:-1});
 
 res.json(blogs);
-
+  }catch(error){
+    res.status(500).json({
+      error:"Failed to fetch blogs"
+    });
+  }
 });
 
 
