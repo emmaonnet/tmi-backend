@@ -937,7 +937,8 @@ blogSchema);
 
 /* GET ALL BLOGS */
 
-app.get("/api/blogs",
+app.get(
+"/api/blogs",
 
 async(req,res)=>{
 
@@ -955,6 +956,44 @@ console.log(error);
 
 res.status(500).json({
 error:"Failed to fetch blogs"
+});
+
+}
+
+});
+
+
+
+/* GET SINGLE BLOG */
+
+app.get(
+"/api/blogs/:id",
+
+async(req,res)=>{
+
+try{
+
+const blog =
+await Blog.findById(
+req.params.id
+);
+
+if(!blog){
+
+return res.status(404).json({
+error:"Blog not found"
+});
+
+}
+
+res.status(200).json(blog);
+
+}catch(error){
+
+console.log(error);
+
+res.status(500).json({
+error:"Failed to fetch blog"
 });
 
 }
@@ -984,7 +1023,7 @@ error:"No image uploaded"
 }
 
 
-/* UPLOAD TO CLOUDINARY */
+/* CLOUDINARY */
 
 const result =
 await cloudinary.uploader.upload(
@@ -1031,49 +1070,7 @@ blog:newBlog
 console.log(error);
 
 res.status(500).json({
-
-error:
-"Blog upload failed"
-
-});
-
-}
-
-});
-
-
-
-/* GET SINGLE BLOG */
-
-app.get(
-
-"/api/blogs/:id",
-
-async(req,res)=>{
-
-try{
-
-const blog =
-await Blog.findById(
-req.params.id
-);
-
-if(!blog){
-
-return res.status(404).json({
-error:"Blog not found"
-});
-
-}
-
-res.status(200).json(blog);
-
-}catch(error){
-
-console.log(error);
-
-res.status(500).json({
-error:"Failed to fetch blog"
+error:"Blog upload failed"
 });
 
 }
@@ -1165,6 +1162,44 @@ error:"Delete failed"
 }
 
 });
+
+
+
+/* =========================
+   TEST ROUTE
+========================= */
+
+app.get("/abc",(req,res)=>{
+
+res.send("ABC WORKING");
+
+});
+
+
+
+/* =========================
+   FRONTEND / CATCH-ALL
+========================= */
+
+/* PLACE YOUR FRONTEND ROUTES HERE */
+
+
+
+/* =========================
+   START SERVER
+========================= */
+
+const PORT =
+process.env.PORT || 5000;
+
+app.listen(PORT, ()=>{
+
+console.log(
+`Server running on ${PORT}`
+);
+
+});
+
 
 
 // ======================================================
