@@ -170,35 +170,6 @@ mediaSchema
 
 
 
-// ================= LIVE MODEL =================
-
-const liveSchema =
-new mongoose.Schema({
-
-title:String,
-
-description:String,
-
-nextServiceDate:String,
-
-offlineVideo:String,
-
-youtubeChannelId:String,
-
-isLive:{
-type:Boolean,
-default:false
-}
-
-});
-
-const LiveSettings =
-mongoose.model(
-"LiveSettings",
-liveSchema
-);
-
-
 
 
 // ======================================================
@@ -510,168 +481,6 @@ error:"Delete failed"
 
 
 
-// ======================================================
-// ===================== LIVE ROUTES ====================
-// ======================================================
-
-
-// ---------- SAVE LIVE SETTINGS ----------
-
-app.post(
-"/api/live-settings",
-async (req, res) => {
-
-try{
-
-await LiveSettings.deleteMany();
-
-const live =
-new LiveSettings({
-
-title:req.body.title,
-
-description:req.body.description,
-
-nextServiceDate:
-req.body.nextServiceDate,
-
-offlineVideo:
-req.body.offlineVideo,
-
-youtubeChannelId:
-req.body.youtubeChannelId,
-
-isLive:req.body.isLive
-
-});
-
-await live.save();
-
-res.json({
-
-success:true,
-
-message:"Live settings saved"
-
-});
-
-}catch(error){
-
-console.log(error);
-
-res.status(500).json({
-
-success:false,
-
-error:"Failed to save live settings"
-
-});
-
-}
-
-});
-
-
-
-
-// ---------- GET LIVE SETTINGS ----------
-
-app.get(
-"/api/live-settings",
-async (req, res) => {
-
-try{
-
-const settings =
-await LiveSettings.findOne();
-
-res.json(settings);
-
-}catch(error){
-
-console.log(error);
-
-res.status(500).json({
-
-success:false,
-
-error:"Failed to fetch live settings"
-
-});
-
-}
-
-});
-
-
-
-
-// ======================================================
-// ===================== LIVE STATUS ====================
-// ======================================================
-
-app.get(
-"/api/live",
-async (req, res) => {
-
-try{
-
-const settings =
-await LiveSettings.findOne();
-
-if(!settings){
-
-return res.json({
-
-isLive:false,
-
-title:"",
-
-description:"",
-
-nextServiceDate:"",
-
-offlineVideo:""
-
-});
-
-}
-
-res.json({
-
-isLive:settings.isLive,
-
-title:settings.title,
-
-description:settings.description,
-
-nextServiceDate:
-settings.nextServiceDate,
-
-offlineVideo:
-settings.offlineVideo,
-
-youtubeChannelId:
-settings.youtubeChannelId
-
-});
-
-}catch(error){
-
-console.log(error);
-
-res.status(500).json({
-
-success:false,
-
-error:"Failed to fetch live data"
-
-});
-
-}
-
-});
-
 
 
 
@@ -853,44 +662,151 @@ success:true
 
 });
 
-// =====================LIVE SETTING ROUTE ===========================
 
-app.put(
-"/api/live-settings",
+
+
+
+/* =========================    LIVE STREAM SCHEMA ========================= */
+
+const liveSchema =
+new mongoose.Schema({
+
+youtubeLiveId:String,
+
+facebookLiveUrl:String,
+
+isLive:{
+type:Boolean,
+default:false
+},
+
+title:String,
+
+updatedAt:{
+type:Date,
+default:Date.now
+}
+
+});
+
+const Live =
+mongoose.model(
+"Live",
+liveSchema
+);
+
+
+
+/* =========================    GET LIVE SETTINGS ========================= */
+
+app.get(
+"/api/live",
+
 async(req,res)=>{
 
 try{
 
-let settings =
-await LiveSettings.findOne();
+let live =
+await Live.findOne();
 
-if(!settings){
+if(!live){
 
-settings =
-new LiveSettings(req.body);
+live =
+await Live.create({
 
-}else{
+youtubeLiveId:"",
+facebookLiveUrl:"",
+isLive:false,
+title:"Live Service"
 
-Object.assign(
-settings,
-req.body
-);
+});
 
 }
 
-await settings.save();
-
-res.json(settings);
+res.json(live);
 
 }catch(error){
 
+console.log(error);
+
 res.status(500).json({
-error:"Live update failed"
+error:"Failed to fetch live data"
 });
 
 }
 
 });
+
+
+
+/* =========================    UPDATE LIVE SETTINGS ========================= */
+
+app.post(
+"/api/live",
+
+async(req,res)=>{
+
+try{
+
+let live =
+await Live.findOne();
+
+if(!live){
+
+live =
+new Live();
+
+}
+
+
+live.youtubeLiveId =
+req.body.youtubeLiveId;
+
+live.facebookLiveUrl =
+req.body.facebookLiveUrl;
+
+live.isLive =
+req.body.isLive;
+
+live.title =
+req.body.title;
+
+
+await live.save();
+
+res.json({
+
+message:
+"Live settings updated",
+
+live
+
+});
+
+}catch(error){
+
+console.log(error);
+
+res.status(500).json({
+error:"Failed to update live"
+});
+
+}
+
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 /* =========================================    BLOG MODEL ========================================= */
 
