@@ -1,5 +1,5 @@
 require("dotenv").config();
-const Blog=require("./models/Blog");
+
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
