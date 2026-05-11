@@ -1181,27 +1181,6 @@ res.send("ABC WORKING");
    FRONTEND / CATCH-ALL
 ========================= */
 
-/* PLACE YOUR FRONTEND ROUTES HERE */
-
-
-
-/* =========================
-   START SERVER
-========================= */
-
-const PORT =
-process.env.PORT || 5000;
-
-app.listen(PORT, ()=>{
-
-console.log(
-`Server running on ${PORT}`
-);
-
-});
-
-
-
 // ======================================================
 // ===================== FRONTEND =======================
 // ======================================================
@@ -1219,21 +1198,26 @@ __dirname,
 });
 
 
-
-
+/* =========================
+   START SERVER
+========================= */
 // ======================================================
 // ===================== PORT ===========================
 // ======================================================
 
+
 const PORT =
 process.env.PORT || 5000;
 
-app.listen(PORT, () => {
+app.listen(PORT, ()=>{
 
 console.log(
-`Server running on port ${PORT}`
+`Server running on ${PORT}`
 );
 
 });
+
+
+
 
 
