@@ -766,27 +766,6 @@ __dirname,
 
 
 
-// ======================================================
-// ===================== PORT ===========================
-// ======================================================
-
-const PORT =
-process.env.PORT || 5000;
-
-app.listen(PORT, () => {
-
-console.log(
-`Server running on port ${PORT}`
-);
-
-});
-
-
-
-
-
-
-
 
 // ===================== ANNOUNCEMENT MODEL ===========================
 
@@ -968,12 +947,12 @@ blogSchema);
 
 
 
-/* =========================   BLOG ROUTES========================= */
+/* =========================
+   BLOG ROUTES
+========================= */
 
 
-
-
-/* GET BLOGS */
+/* GET ALL BLOGS */
 
 app.get(
 "/api/blogs",
@@ -986,7 +965,7 @@ const blogs =
 await Blog.find()
 .sort({createdAt:-1});
 
-res.json(blogs);
+res.status(200).json(blogs);
 
 }catch(error){
 
@@ -1001,9 +980,11 @@ error:"Failed to fetch blogs"
 });
 
 
+
 /* CREATE BLOG */
 
 app.post(
+
 "/api/blogs",
 
 upload.single("image"),
@@ -1021,20 +1002,23 @@ error:"No image uploaded"
 }
 
 
-/* CLOUDINARY */
+/* UPLOAD TO CLOUDINARY */
 
 const result =
 await cloudinary.uploader.upload(
+
 req.file.path,
+
 {
 folder:"blogs"
 }
+
 );
 
 
-/* SAVE */
+/* SAVE BLOG */
 
-const blog =
+const newBlog =
 new Blog({
 
 title:req.body.title,
@@ -1047,7 +1031,8 @@ image:result.secure_url
 
 });
 
-await blog.save();
+
+await newBlog.save();
 
 
 res.status(201).json({
@@ -1055,7 +1040,7 @@ res.status(201).json({
 message:
 "Blog uploaded successfully",
 
-blog
+blog:newBlog
 
 });
 
@@ -1075,29 +1060,38 @@ error:
 });
 
 
-/* DELETE BLOG */
 
-app.delete(
+/* GET SINGLE BLOG */
+
+app.get(
+
 "/api/blogs/:id",
 
 async(req,res)=>{
 
 try{
 
-await Blog.findByIdAndDelete(
+const blog =
+await Blog.findById(
 req.params.id
 );
 
-res.json({
-message:"Blog deleted"
+if(!blog){
+
+return res.status(404).json({
+error:"Blog not found"
 });
+
+}
+
+res.status(200).json(blog);
 
 }catch(error){
 
 console.log(error);
 
 res.status(500).json({
-error:"Delete failed"
+error:"Failed to fetch blog"
 });
 
 }
@@ -1105,9 +1099,11 @@ error:"Delete failed"
 });
 
 
+
 /* UPDATE BLOG */
 
 app.put(
+
 "/api/blogs/:id",
 
 async(req,res)=>{
@@ -1125,11 +1121,21 @@ description:req.body.description,
 content:req.body.content
 },
 
-{new:true}
+{
+new:true
+}
 
 );
 
-res.json(updatedBlog);
+
+res.status(200).json({
+
+message:
+"Blog updated",
+
+blog:updatedBlog
+
+});
 
 }catch(error){
 
@@ -1142,3 +1148,58 @@ error:"Update failed"
 }
 
 });
+
+
+
+/* DELETE BLOG */
+
+app.delete(
+
+"/api/blogs/:id",
+
+async(req,res)=>{
+
+try{
+
+await Blog.findByIdAndDelete(
+req.params.id
+);
+
+res.status(200).json({
+
+message:
+"Blog deleted"
+
+});
+
+}catch(error){
+
+console.log(error);
+
+res.status(500).json({
+error:"Delete failed"
+});
+
+}
+
+});
+
+
+
+
+// ======================================================
+// ===================== PORT ===========================
+// ======================================================
+
+const PORT =
+process.env.PORT || 5000;
+
+app.listen(PORT, () => {
+
+console.log(
+`Server running on port ${PORT}`
+);
+
+});
+
+
