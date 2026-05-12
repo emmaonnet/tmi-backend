@@ -559,24 +559,7 @@ error:"Failed"
 
 
 
-// ===================== ANNOUNCEMENT MODEL ===========================
 
-const announcementSchema =
-new mongoose.Schema({
-
-title:String,
-
-message:String
-
-},{
-timestamps:true
-});
-
-const Announcement =
-mongoose.model(
-"Announcement",
-announcementSchema
-);
 
 
 // ===================== UPDATE MEDIA ROUTE ===========================
@@ -613,54 +596,6 @@ error:"Update failed"
 });
 
 
-// =====================ANNOUNCEMENT ROUTE ===========================
-
-app.post(
-"/api/announcements",
-async(req,res)=>{
-
-const announcement =
-new Announcement({
-
-title:req.body.title,
-
-message:req.body.message
-
-});
-
-await announcement.save();
-
-res.json(announcement);
-
-});
-
-
-app.get(
-"/api/announcements",
-async(req,res)=>{
-
-const announcements =
-await Announcement.find()
-.sort({createdAt:-1});
-
-res.json(announcements);
-
-});
-
-
-app.delete(
-"/api/announcements/:id",
-async(req,res)=>{
-
-await Announcement.findByIdAndDelete(
-req.params.id
-);
-
-res.json({
-success:true
-});
-
-});
 
 
 
@@ -846,9 +781,7 @@ blogSchema);
 
 
 
-/* =========================
-   BLOG ROUTES
-========================= */
+/* =========================    BLOG ROUTES ========================= */
 
 
 /* GET ALL BLOGS */
@@ -1078,6 +1011,163 @@ error:"Delete failed"
 }
 
 });
+
+
+
+
+
+/* =========================    ANNOUNCEMENT SCHEMA ========================= */
+
+const announcementSchema =
+new mongoose.Schema({
+
+title:String,
+
+message:String,
+
+date:{
+type:Date,
+default:Date.now
+}
+
+});
+
+
+const Announcement =
+mongoose.model(
+"Announcement",
+announcementSchema
+);
+
+
+
+/* =========================    GET ANNOUNCEMENTS ========================= */
+
+app.get(
+"/api/announcements",
+
+async(req,res)=>{
+
+try{
+
+const announcements =
+await Announcement.find()
+.sort({date:-1});
+
+res.json(announcements);
+
+}catch(error){
+
+console.log(error);
+
+res.status(500).json({
+error:
+"Failed to fetch announcements"
+});
+
+}
+
+});
+
+
+
+/* =========================    CREATE ANNOUNCEMENT ========================= */
+
+app.post(
+"/api/announcements",
+
+async(req,res)=>{
+
+try{
+
+const announcement =
+new Announcement({
+
+title:req.body.title,
+
+message:req.body.message
+
+});
+
+
+await announcement.save();
+
+res.status(201).json({
+
+message:
+"Announcement created",
+
+announcement
+
+});
+
+}catch(error){
+
+console.log(error);
+
+res.status(500).json({
+error:
+"Failed to create announcement"
+});
+
+}
+
+});
+
+
+
+/* =========================    DELETE ANNOUNCEMENT ========================= */
+
+app.delete(
+"/api/announcements/:id",
+
+async(req,res)=>{
+
+try{
+
+await Announcement.findByIdAndDelete(
+req.params.id
+);
+
+res.json({
+
+message:
+"Announcement deleted"
+
+});
+
+}catch(error){
+
+console.log(error);
+
+res.status(500).json({
+error:
+"Delete failed"
+});
+
+}
+
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
