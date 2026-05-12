@@ -1151,6 +1151,54 @@ error:
 
 
 
+/* =========================    UPDATE ANNOUNCEMENT ========================= */
+
+app.put(
+"/api/announcements/:id",
+
+async(req,res)=>{
+
+try{
+
+const updated =
+await Announcement.findByIdAndUpdate(
+
+req.params.id,
+
+{
+title:req.body.title,
+message:req.body.message
+},
+
+{new:true}
+
+);
+
+res.json({
+
+message:
+"Announcement updated",
+
+updated
+
+});
+
+}catch(error){
+
+console.log(error);
+
+res.status(500).json({
+
+error:
+"Failed to update announcement"
+
+});
+
+}
+
+});
+
+
 
 
 
