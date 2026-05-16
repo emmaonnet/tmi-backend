@@ -17,7 +17,39 @@ const app = express();
 // ===================== MIDDLEWARE =====================
 // ======================================================
 
-app.use(cors());
+
+
+
+
+app.use(cors({
+
+origin:[
+
+"https://tmi.page.gd",
+
+"https://www.tmi.page.gd"
+
+],
+
+methods:[
+"GET",
+"POST",
+"PUT",
+"DELETE"
+],
+
+credentials:true
+
+}));
+
+
+
+
+
+
+
+
+
 
 app.use(express.json({
 limit:"50mb"
