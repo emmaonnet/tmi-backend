@@ -1,157 +1,131 @@
+require("dotenv").config();
+
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const multer = require("multer");
+const cloudinary = require("cloudinary").v2;
+
+
+
 const path = require("path");
-const fs = require("fs");
 
 const app = express();
 
 
-
-/* =========================
-   MIDDLEWARE
-========================= */
+// ======================================================
+// ===================== MIDDLEWARE =====================
+// ======================================================
 
 app.use(cors());
 
-app.use(express.json());
+app.use(express.json({
+limit:"50mb"
+}));
+
+app.use(express.urlencoded({
+extended:true,
+limit:"50mb"
+}));
+
+
+// ======================================================
+// ===================== STATIC FILES ===================
+// ======================================================
 
 app.use(
-express.urlencoded({
-extended:true
-})
-);
-
-
-
-/* =========================
-   CREATE UPLOADS FOLDER
-========================= */
-
-if(!fs.existsSync("uploads")){
-
-fs.mkdirSync("uploads");
-
-}
-
-
-
-/* =========================
-   STATIC FOLDER
-========================= */
-
-app.use(
-"/uploads",
 express.static(
-path.join(__dirname,"uploads")
+path.join(__dirname, "public")
 )
 );
 
 
-
-/* =========================
-   MONGODB
-========================= */
+// ======================================================
+// ===================== MONGODB ========================
+// ======================================================
 
 mongoose.connect(
-process.env.MONGO_URI || "mongodb://127.0.0.1:27017/tmi-tv",
-{
-useNewUrlParser:true,
-useUnifiedTopology:true
-}
+process.env.MONGODB_URI
 )
-.then(()=>{
+.then(() => {
 
 console.log("MongoDB Connected");
 
 })
-.catch(err=>{
+.catch((err) => {
 
-console.log(err);
+console.log("MongoDB Error:", err);
 
 });
 
 
+// ======================================================
+// ===================== CLOUDINARY =====================
+// ======================================================
 
-/* =========================
-   MODELS
-========================= */
+cloudinary.config({
+
+cloud_name:
+process.env.CLOUDINARY_NAME,
+
+api_key:
+process.env.CLOUDINARY_KEY,
+
+api_secret:
+process.env.CLOUDINARY_SECRET
+
+});
+
+
+// ======================================================
+// ===================== MULTER STORAGE =================
+// ======================================================
+
+
+
+
+
+const upload =
+multer({
+dest:"uploads/"
+});
+
+
+
+// ======================================================
+// ===================== MODELS =========================
+// ======================================================
+
+
+// ================= SERMON MODEL =================
 
 const sermonSchema =
 new mongoose.Schema({
 
-title:String,
+title:{
+type:String,
+required:true
+},
+
 description:String,
-image:String,
-video:String,
 
-createdAt:{
-type:Date,
-default:Date.now
+category:String,
+
+duration:String,
+
+videoUrl:{
+type:String,
+required:true
+},
+
+thumbnail:{
+type:String,
+required:true
 }
 
+},{
+timestamps:true
 });
-
-const blogSchema =
-new mongoose.Schema({
-
-title:String,
-content:String,
-image:String,
-
-createdAt:{
-type:Date,
-default:Date.now
-}
-
-});
-
-const mediaSchema =
-new mongoose.Schema({
-
-title:String,
-description:String,
-url:String,
-
-createdAt:{
-type:Date,
-default:Date.now
-}
-
-});
-
-const announcementSchema =
-new mongoose.Schema({
-
-title:String,
-content:String,
-
-createdAt:{
-type:Date,
-default:Date.now
-}
-
-});
-
-const liveSchema =
-new mongoose.Schema({
-
-isLive:Boolean,
-platform:String,
-title:String,
-description:String,
-youtubeChannel:String,
-facebookPage:String,
-
-createdAt:{
-type:Date,
-default:Date.now
-}
-
-});
-
-
 
 const Sermon =
 mongoose.model(
@@ -159,11 +133,34 @@ mongoose.model(
 sermonSchema
 );
 
-const Blog =
-mongoose.model(
-"Blog",
-blogSchema
-);
+
+
+// ================= MEDIA MODEL =================
+
+const mediaSchema =
+new mongoose.Schema({
+
+title:{
+type:String,
+required:true
+},
+
+description:String,
+
+type:{
+type:String,
+enum:["image","video"],
+required:true
+},
+
+url:{
+type:String,
+required:true
+}
+
+},{
+timestamps:true
+});
 
 const Media =
 mongoose.model(
@@ -171,130 +168,46 @@ mongoose.model(
 mediaSchema
 );
 
-const Announcement =
-mongoose.model(
-"Announcement",
-announcementSchema
+
+
+
+
+// ======================================================
+// ===================== ROOT ===========================
+// ======================================================
+
+app.get("/", (req, res) => {
+
+res.send(
+"Testimony Missions Backend Running"
 );
 
-const Live =
-mongoose.model(
-"Live",
-liveSchema
-);
-
-
-
-/* =========================
-   MULTER
-========================= */
-
-const storage =
-multer.diskStorage({
-
-destination:(req,file,cb)=>{
-
-cb(null,"uploads/");
-
-},
-
-filename:(req,file,cb)=>{
-
-cb(
-null,
-Date.now() +
-"-" +
-file.originalname
-);
-
-}
-
-});
-
-const upload =
-multer({
-storage
 });
 
 
 
-/* =========================
-   LIVE ROUTES
-========================= */
 
-app.post(
-"/api/live",
-async(req,res)=>{
-
-try{
-
-await Live.deleteMany({});
-
-const live =
-new Live(req.body);
-
-await live.save();
-
-res.json({
-
-success:true,
-message:"Live updated"
-
-});
-
-}catch(error){
-
-console.log(error);
-
-res.status(500).json({
-
-success:false
-
-});
-
-}
-
-});
+// ======================================================
+// ===================== SERMON ROUTES ==================
+// ======================================================
 
 
-
-app.get(
-"/api/live",
-async(req,res)=>{
-
-const live =
-await Live.findOne()
-.sort({createdAt:-1});
-
-res.json(live);
-
-});
-
-
-
-/* =========================
-   SERMON ROUTES
-========================= */
+// ---------- UPLOAD SERMON ----------
 
 app.post(
 "/api/sermons",
-upload.single("image"),
-async(req,res)=>{
+upload.single("thumbnail"),
+async (req, res) => {
 
 try{
 
-console.log(req.file);
-
-if(!req.file){
-
-return res.status(400).json({
-
-success:false,
-message:"No image uploaded"
-
-});
-
+const result =
+await cloudinary.uploader.upload(
+req.file.path,
+{
+folder:"testimony-sermons"
 }
+);
 
 const sermon =
 new Sermon({
@@ -303,10 +216,13 @@ title:req.body.title,
 
 description:req.body.description,
 
-video:req.body.video || "",
+category:req.body.category,
 
-image:
-`${req.protocol}://${req.get("host")}/uploads/${req.file.filename}`
+duration:req.body.duration,
+
+videoUrl:req.body.videoUrl,
+
+thumbnail:result.secure_url
 
 });
 
@@ -315,7 +231,9 @@ await sermon.save();
 res.json({
 
 success:true,
+
 message:"Sermon uploaded",
+
 sermon
 
 });
@@ -325,9 +243,39 @@ sermon
 console.log(error);
 
 res.status(500).json({
+error:"Upload failed"
+});
+
+}
+
+});
+
+
+
+
+// ---------- GET ALL SERMONS ----------
+
+app.get(
+"/api/sermons",
+async (req, res) => {
+
+try{
+
+const sermons =
+await Sermon.find()
+.sort({ createdAt:-1 });
+
+res.json(sermons);
+
+}catch(error){
+
+console.log(error);
+
+res.status(500).json({
 
 success:false,
-message:error.message
+
+error:"Failed to fetch sermons"
 
 });
 
@@ -337,23 +285,14 @@ message:error.message
 
 
 
-app.get(
-"/api/sermons",
-async(req,res)=>{
 
-const sermons =
-await Sermon.find()
-.sort({createdAt:-1});
-
-res.json(sermons);
-
-});
-
-
+// ---------- DELETE SERMON ----------
 
 app.delete(
 "/api/sermons/:id",
-async(req,res)=>{
+async (req, res) => {
+
+try{
 
 await Sermon.findByIdAndDelete(
 req.params.id
@@ -361,57 +300,9 @@ req.params.id
 
 res.json({
 
-success:true
-
-});
-
-});
-
-
-
-/* =========================
-   BLOG ROUTES
-========================= */
-
-app.post(
-"/api/blogs",
-upload.single("image"),
-async(req,res)=>{
-
-try{
-
-console.log(req.file);
-
-if(!req.file){
-
-return res.status(400).json({
-
-success:false,
-message:"No image uploaded"
-
-});
-
-}
-
-const blog =
-new Blog({
-
-title:req.body.title,
-
-content:req.body.content,
-
-image:
-`${req.protocol}://${req.get("host")}/uploads/${req.file.filename}`
-
-});
-
-await blog.save();
-
-res.json({
-
 success:true,
-message:"Blog uploaded",
-blog
+
+message:"Sermon deleted"
 
 });
 
@@ -422,7 +313,8 @@ console.log(error);
 res.status(500).json({
 
 success:false,
-message:error.message
+
+error:"Delete failed"
 
 });
 
@@ -432,84 +324,69 @@ message:error.message
 
 
 
-app.get(
-"/api/blogs",
-async(req,res)=>{
 
-const blogs =
-await Blog.find()
-.sort({createdAt:-1});
-
-res.json(blogs);
-
-});
+// ======================================================
+// ===================== MEDIA ROUTES ===================
+// ======================================================
 
 
-
-app.delete(
-"/api/blogs/:id",
-async(req,res)=>{
-
-await Blog.findByIdAndDelete(
-req.params.id
-);
-
-res.json({
-
-success:true
-
-});
-
-});
-
-
-
-/* =========================
-   MEDIA ROUTES
-========================= */
+// ---------- UPLOAD MEDIA ----------
 
 app.post(
 "/api/media",
-upload.single("media"),
+
+upload.single("file"),
+
 async(req,res)=>{
 
 try{
 
-console.log(req.file);
-
 if(!req.file){
 
 return res.status(400).json({
-
-success:false,
-message:"No media uploaded"
-
+error:"No file uploaded"
 });
 
 }
 
+
+/* CLOUDINARY */
+
+const result =
+await cloudinary.uploader.upload(
+req.file.path,
+{
+resource_type:"auto",
+folder:"media"
+}
+);
+
+
+/* SAVE TO DATABASE */
+
 const media =
 new Media({
 
-title:
-req.body.title ||
-"TMI Media",
+title:req.body.title,
 
-description:
-req.body.description ||
-"Media Upload",
+description:req.body.description,
 
-url:
-`${req.protocol}://${req.get("host")}/uploads/${req.file.filename}`
+type:req.body.type,
+
+url:result.secure_url
 
 });
 
 await media.save();
 
-res.json({
 
-success:true,
-message:"Media uploaded successfully",
+/* SUCCESS */
+
+res.status(201).json({
+
+message:
+"Media uploaded successfully",
+
 media
 
 });
@@ -520,8 +397,8 @@ console.log(error);
 
 res.status(500).json({
 
-success:false,
-message:error.message
+error:
+"Media upload failed"
 
 });
 
@@ -531,23 +408,47 @@ message:error.message
 
 
 
+
+// ---------- GET ALL MEDIA ----------
+
 app.get(
 "/api/media",
-async(req,res)=>{
+async (req, res) => {
+
+try{
 
 const media =
 await Media.find()
-.sort({createdAt:-1});
+.sort({ createdAt:-1 });
 
 res.json(media);
+
+}catch(error){
+
+console.log(error);
+
+res.status(500).json({
+
+success:false,
+
+error:"Failed to fetch media"
+
+});
+
+}
 
 });
 
 
 
+
+// ---------- DELETE MEDIA ----------
+
 app.delete(
 "/api/media/:id",
-async(req,res)=>{
+async (req, res) => {
+
+try{
 
 await Media.findByIdAndDelete(
 req.params.id
@@ -555,44 +456,9 @@ req.params.id
 
 res.json({
 
-success:true
-
-});
-
-});
-
-
-
-
-
-
-
-
-
-/* =========================
-   ANNOUNCEMENTS
-========================= */
-
-app.post(
-"/api/announcements",
-async(req,res)=>{
-
-try{
-
-const announcement =
-new Announcement({
-
-title:req.body.title,
-content:req.body.content
-
-});
-
-await announcement.save();
-
-res.json({
-
 success:true,
-message:"Announcement added"
+
+message:"Media deleted"
 
 });
 
@@ -602,7 +468,9 @@ console.log(error);
 
 res.status(500).json({
 
-success:false
+success:false,
+
+error:"Delete failed"
 
 });
 
@@ -612,23 +480,650 @@ success:false
 
 
 
+
+
+
+
+// ======================================================
+// ===================== INDEX ROUTES ===================
+// ======================================================
+
+
+// ---------- LATEST SERMON ----------
+
 app.get(
-"/api/announcements",
-async(req,res)=>{
+"/api/latest-sermon",
+async (req, res) => {
 
-const announcements =
-await Announcement.find()
-.sort({createdAt:-1});
+try{
 
-res.json(announcements);
+const sermon =
+await Sermon.findOne()
+.sort({ createdAt:-1 });
+
+res.json(sermon);
+
+}catch(error){
+
+console.log(error);
+
+res.status(500).json({
+
+success:false,
+
+error:"Failed"
+
+});
+
+}
 
 });
 
 
 
+
+// ---------- LATEST MEDIA ----------
+
+app.get(
+"/api/latest-media",
+async (req, res) => {
+
+try{
+
+const media =
+await Media.find()
+.sort({ createdAt:-1 })
+.limit(6);
+
+res.json(media);
+
+}catch(error){
+
+console.log(error);
+
+res.status(500).json({
+
+success:false,
+
+error:"Failed"
+
+});
+
+}
+
+});
+
+
+
+
+
+
+
+
+
+
+// ===================== UPDATE MEDIA ROUTE ===========================
+app.put(
+"/api/media/:id",
+async(req,res)=>{
+
+try{
+
+const updated =
+await Media.findByIdAndUpdate(
+
+req.params.id,
+
+{
+title:req.body.title,
+description:req.body.description
+},
+
+{new:true}
+
+);
+
+res.json(updated);
+
+}catch(error){
+
+res.status(500).json({
+error:"Update failed"
+});
+
+}
+
+});
+
+
+
+
+
+
+
+/* =========================    LIVE STREAM SCHEMA ========================= */
+
+const liveSchema =
+new mongoose.Schema({
+
+youtubeLiveId:String,
+
+facebookLiveUrl:String,
+
+isLive:{
+type:Boolean,
+default:false
+},
+
+title:String,
+
+updatedAt:{
+type:Date,
+default:Date.now
+}
+
+});
+
+const Live =
+mongoose.model(
+"Live",
+liveSchema
+);
+
+
+
+/* =========================    GET LIVE SETTINGS ========================= */
+
+app.get(
+"/api/live",
+
+async(req,res)=>{
+
+try{
+
+let live =
+await Live.findOne();
+
+if(!live){
+
+live =
+await Live.create({
+
+youtubeLiveId:"",
+facebookLiveUrl:"",
+isLive:false,
+title:"Live Service"
+
+});
+
+}
+
+res.json(live);
+
+}catch(error){
+
+console.log(error);
+
+res.status(500).json({
+error:"Failed to fetch live data"
+});
+
+}
+
+});
+
+
+
+/* =========================    UPDATE LIVE SETTINGS ========================= */
+
+app.post(
+"/api/live",
+
+async(req,res)=>{
+
+try{
+
+let live =
+await Live.findOne();
+
+if(!live){
+
+live =
+new Live();
+
+}
+
+
+live.youtubeLiveId =
+req.body.youtubeLiveId;
+
+live.facebookLiveUrl =
+req.body.facebookLiveUrl;
+
+live.isLive =
+req.body.isLive;
+
+live.title =
+req.body.title;
+
+
+await live.save();
+
+res.json({
+
+message:
+"Live settings updated",
+
+live
+
+});
+
+}catch(error){
+
+console.log(error);
+
+res.status(500).json({
+error:"Failed to update live"
+});
+
+}
+
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* =========================================    BLOG MODEL ========================================= */
+
+const blogSchema =
+new mongoose.Schema({
+
+title:{
+type:String,
+required:true
+},
+
+description:{
+type:String,
+default:""
+},
+
+content:{
+type:String,
+default:""
+},
+
+image:{
+type:String,
+required:true
+}
+
+},{
+timestamps:true
+});
+
+const Blog =
+mongoose.model(
+"Blog",
+blogSchema);
+
+
+
+
+
+/* =========================    BLOG ROUTES ========================= */
+
+
+/* GET ALL BLOGS */
+
+app.get(
+"/api/blogs",
+
+async(req,res)=>{
+
+try{
+
+const blogs =
+await Blog.find()
+.sort({createdAt:-1});
+
+res.status(200).json(blogs);
+
+}catch(error){
+
+console.log(error);
+
+res.status(500).json({
+error:"Failed to fetch blogs"
+});
+
+}
+
+});
+
+
+
+/* GET SINGLE BLOG */
+
+app.get(
+"/api/blogs/:id",
+
+async(req,res)=>{
+
+try{
+
+const blog =
+await Blog.findById(
+req.params.id
+);
+
+if(!blog){
+
+return res.status(404).json({
+error:"Blog not found"
+});
+
+}
+
+res.status(200).json(blog);
+
+}catch(error){
+
+console.log(error);
+
+res.status(500).json({
+error:"Failed to fetch blog"
+});
+
+}
+
+});
+
+
+
+/* CREATE BLOG */
+
+app.post(
+
+"/api/blogs",
+
+upload.single("image"),
+
+async(req,res)=>{
+
+try{
+
+if(!req.file){
+
+return res.status(400).json({
+error:"No image uploaded"
+});
+
+}
+
+
+/* CLOUDINARY */
+
+const result =
+await cloudinary.uploader.upload(
+
+req.file.path,
+
+{
+folder:"blogs"
+}
+
+);
+
+
+/* SAVE BLOG */
+
+const newBlog =
+new Blog({
+
+title:req.body.title,
+
+description:req.body.description,
+
+content:req.body.content,
+
+image:result.secure_url
+
+});
+
+
+await newBlog.save();
+
+
+res.status(201).json({
+
+message:
+"Blog uploaded successfully",
+
+blog:newBlog
+
+});
+
+}catch(error){
+
+console.log(error);
+
+res.status(500).json({
+error:"Blog upload failed"
+});
+
+}
+
+});
+
+
+
+/* UPDATE BLOG */
+
+app.put(
+
+"/api/blogs/:id",
+
+async(req,res)=>{
+
+try{
+
+const updatedBlog =
+await Blog.findByIdAndUpdate(
+
+req.params.id,
+
+{
+title:req.body.title,
+description:req.body.description,
+content:req.body.content
+},
+
+{
+new:true
+}
+
+);
+
+
+res.status(200).json({
+
+message:
+"Blog updated",
+
+blog:updatedBlog
+
+});
+
+}catch(error){
+
+console.log(error);
+
+res.status(500).json({
+error:"Update failed"
+});
+
+}
+
+});
+
+
+
+/* DELETE BLOG */
+
+app.delete(
+
+"/api/blogs/:id",
+
+async(req,res)=>{
+
+try{
+
+await Blog.findByIdAndDelete(
+req.params.id
+);
+
+res.status(200).json({
+
+message:
+"Blog deleted"
+
+});
+
+}catch(error){
+
+console.log(error);
+
+res.status(500).json({
+error:"Delete failed"
+});
+
+}
+
+});
+
+
+
+
+
+/* =========================    ANNOUNCEMENT SCHEMA ========================= */
+
+const announcementSchema =
+new mongoose.Schema({
+
+title:String,
+
+message:String,
+
+date:{
+type:Date,
+default:Date.now
+}
+
+});
+
+
+const Announcement =
+mongoose.model(
+"Announcement",
+announcementSchema
+);
+
+
+
+/* =========================    GET ANNOUNCEMENTS ========================= */
+
+app.get(
+"/api/announcements",
+
+async(req,res)=>{
+
+try{
+
+const announcements =
+await Announcement.find()
+.sort({date:-1});
+
+res.json(announcements);
+
+}catch(error){
+
+console.log(error);
+
+res.status(500).json({
+error:
+"Failed to fetch announcements"
+});
+
+}
+
+});
+
+
+
+/* =========================    CREATE ANNOUNCEMENT ========================= */
+
+app.post(
+"/api/announcements",
+
+async(req,res)=>{
+
+try{
+
+const announcement =
+new Announcement({
+
+title:req.body.title,
+
+message:req.body.message
+
+});
+
+
+await announcement.save();
+
+res.status(201).json({
+
+message:
+"Announcement created",
+
+announcement
+
+});
+
+}catch(error){
+
+console.log(error);
+
+res.status(500).json({
+error:
+"Failed to create announcement"
+});
+
+}
+
+});
+
+
+
+/* =========================    DELETE ANNOUNCEMENT ========================= */
+
 app.delete(
 "/api/announcements/:id",
+
 async(req,res)=>{
+
+try{
 
 await Announcement.findByIdAndDelete(
 req.params.id
@@ -636,56 +1131,147 @@ req.params.id
 
 res.json({
 
-success:true
+message:
+"Announcement deleted"
 
 });
 
+}catch(error){
+
+console.log(error);
+
+res.status(500).json({
+error:
+"Delete failed"
+});
+
+}
+
 });
 
 
 
-/* =========================
-   VISITORS
-========================= */
+/* =========================    UPDATE ANNOUNCEMENT ========================= */
 
-app.get(
-"/api/visitors",
-(req,res)=>{
+app.put(
+"/api/announcements/:id",
+
+async(req,res)=>{
+
+try{
+
+const updated =
+await Announcement.findByIdAndUpdate(
+
+req.params.id,
+
+{
+title:req.body.title,
+message:req.body.message
+},
+
+{new:true}
+
+);
 
 res.json({
 
 message:
-"🇳🇬 Nigeria: 30 • 🇺🇸 USA: 5 • Total Visitors: 35"
+"Announcement updated",
+
+updated
 
 });
+
+}catch(error){
+
+console.log(error);
+
+res.status(500).json({
+
+error:
+"Failed to update announcement"
+
+});
+
+}
+
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* =========================
+   TEST ROUTE
+========================= */
+
+app.get("/abc",(req,res)=>{
+
+res.send("ABC WORKING");
 
 });
 
 
 
 /* =========================
-   ROOT
+   FRONTEND / CATCH-ALL
 ========================= */
 
-app.get("/",(req,res)=>{
+// ======================================================
+// ===================== FRONTEND =======================
+// ======================================================
 
-res.send("TMI Backend Running");
+app.get("*", (req, res) => {
 
-});
-
-
-
-/* =========================
-   SERVER
-========================= */
-
-const PORT =
-process.env.PORT || 3000;
-
-app.listen(PORT,()=>{
-
-console.log(
-`Server running on port ${PORT}`
+res.sendFile(
+path.join(
+__dirname,
+"public",
+"index.html"
+)
 );
 
 });
+
+
+/* =========================
+   START SERVER
+========================= */
+// ======================================================
+// ===================== PORT ===========================
+// ======================================================
+
+
+const PORT =
+process.env.PORT || 5000;
+
+app.listen(PORT, ()=>{
+
+console.log(
+`Server running on ${PORT}`
+);
+
+});
+
+
+
+
+
