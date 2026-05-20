@@ -1203,6 +1203,101 @@ error:
 
 
 
+// CURRENT LIVE STATE
+let liveState = {
+  type: "youtube",
+  youtubeId: "DEFAULT_ID",
+  facebookUrl: "",
+  channel: "main"
+};
+
+// MULTI-CHANNEL SYSTEM
+let channels = {
+  main: liveState,
+  music: {
+    type: "youtube",
+    youtubeId: "MUSIC_ID",
+    facebookUrl: ""
+  },
+  news: {
+    type: "youtube",
+    youtubeId: "NEWS_ID",
+    facebookUrl: ""
+  }
+};
+
+// SCHEDULE SYSTEM
+let schedule = [
+  {
+    time: "08:00",
+    channel: "news"
+  },
+  {
+    time: "18:00",
+    channel: "music"
+  }
+];
+
+// 🔴 GET LIVE (REAL-TIME)
+app.get("/api/live", (req, res) => {
+  res.json(liveState);
+});
+
+// 📺 GET ALL CHANNELS (MULTI-TV)
+app.get("/api/channels", (req, res) => {
+  res.json(channels);
+});
+
+// 🎛 SWITCH CHANNEL (REAL-TIME CONTROL)
+app.post("/api/switch", (req, res) => {
+  const { channel } = req.body;
+
+  if (channels[channel]) {
+    liveState = {
+      ...channels[channel],
+      channel
+    };
+  }
+
+  res.json({ success: true, liveState });
+});
+
+// 📅 UPDATE SCHEDULE
+app.post("/api/schedule", (req, res) => {
+  schedule = req.body.schedule;
+  res.json({ success: true, schedule });
+});
+
+// ⏱ AUTO SCHEDULER ENGINE
+setInterval(() => {
+  const now = new Date();
+  const currentTime =
+    now.getHours().toString().padStart(2, "0") +
+":" +
+    now.getMinutes().toString().padStart(2, "0");
+
+  schedule.forEach(item => {
+    if (item.time === currentTime) {
+      if (channels[item.channel]) {
+        liveState = {
+          ...channels[item.channel],
+          channel: item.channel
+        };
+        console.log("Auto-switched to:", item.channel);
+      }
+    }
+  });
+}, 60000); // check every 1 min
+
+
+
+
+
+
+
+
+
+
 
 
 
