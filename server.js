@@ -482,7 +482,7 @@ if(!req.file){
 return res.status(400).json({
 
 success:false,
-message:"No file uploaded"
+message:"No media uploaded"
 
 });
 
@@ -497,7 +497,7 @@ req.body.title ||
 
 description:
 req.body.description ||
-"Ministry Media",
+"Media Upload",
 
 url:
 `${req.protocol}://${req.get("host")}/uploads/${req.file.filename}`
@@ -509,7 +509,7 @@ await media.save();
 res.json({
 
 success:true,
-message:"Media uploaded",
+message:"Media uploaded successfully",
 media
 
 });
@@ -560,6 +560,12 @@ success:true
 });
 
 });
+
+
+
+
+
+
 
 
 
