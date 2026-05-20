@@ -634,42 +634,31 @@ liveSchema
 
 /* =========================    GET LIVE SETTINGS ========================= */
 
-app.get(
-"/api/live",
 
-async(req,res)=>{
 
-try{
+// current live source
+let liveSource = {
+  type: "youtube",
+  youtubeId: "YOUR_DEFAULT_ID",
+  facebookUrl: ""
+};
 
-let live =
-await Live.findOne();
-
-if(!live){
-
-live =
-await Live.create({
-
-youtubeLiveId:"",
-facebookLiveUrl:"",
-isLive:false,
-title:"Live Service"
-
+// GET current live stream (for users)
+app.get("/api/live", (req, res) => {
+  res.json(liveSource);
 });
 
-}
+// ADMIN update live stream
+app.post("/api/live", (req, res) => {
+  const { type, youtubeId, facebookUrl } = req.body;
 
-res.json(live);
+  liveSource = {
+    type,
+    youtubeId: youtubeId || "",
+    facebookUrl: facebookUrl || ""
+  };
 
-}catch(error){
-
-console.log(error);
-
-res.status(500).json({
-error:"Failed to fetch live data"
-});
-
-}
-
+  res.json({ success: true, liveSource });
 });
 
 
