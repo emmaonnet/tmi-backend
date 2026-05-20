@@ -34,9 +34,6 @@ Date.now() + "-" + file.originalname
 
 });
 
-const upload = multer({
-storage
-});
 
 
 
