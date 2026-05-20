@@ -720,7 +720,7 @@ error:"Failed to update live"
 });
 
 
-
+console.log(req.body);
 
 
 
@@ -1289,6 +1289,18 @@ setInterval(() => {
   });
 }, 60000); // check every 1 min
 
+
+
+app.post("/api/live", (req, res) => {
+  liveState = {
+    type: req.body.type || "youtube",
+    youtubeId: req.body.youtubeId || "",
+    facebookUrl: req.body.facebookUrl || "",
+    channel: req.body.channel || "main"
+  };
+
+  res.json({ success: true, liveState });
+});
 
 
 
