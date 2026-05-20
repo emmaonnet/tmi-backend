@@ -562,7 +562,7 @@ success:true
 });
 
 
-
+console.log(req.file);
 
 
 
