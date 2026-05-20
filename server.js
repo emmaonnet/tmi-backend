@@ -394,15 +394,29 @@ upload.single("media"),
 
 try{
 
+console.log("BODY:", req.body);
+console.log("FILE:", req.file);
+
+if(!req.file){
+
+return res.status(400).json({
+
+success:false,
+message:"No file uploaded"
+
+});
+
+}
+
 const media = {
 
 _id: Date.now(),
 
-title: req.body.title || "TMI Media",
+title:
+req.body.title || "TMI Media",
 
 description:
-req.body.description ||
-"Ministry Media",
+req.body.description || "Media Upload",
 
 url:
 `${req.protocol}://${req.get("host")}/uploads/${req.file.filename}`,
@@ -416,19 +430,19 @@ mediaItems.unshift(media);
 res.json({
 
 success:true,
-message:"Media uploaded",
+message:"Upload successful",
 media
 
 });
 
 }catch(error){
 
-console.log(error);
+console.log("UPLOAD ERROR:", error);
 
 res.status(500).json({
 
 success:false,
-message:"Upload failed"
+message:error.message
 
 });
 
@@ -437,31 +451,6 @@ message:"Upload failed"
 });
 
 
-
-app.get("/api/media",(req,res)=>{
-
-res.json(mediaItems);
-
-});
-
-
-
-app.delete(
-"/api/media/:id",
-(req,res)=>{
-
-mediaItems =
-mediaItems.filter(
-item=>item._id != req.params.id
-);
-
-res.json({
-
-success:true
-
-});
-
-});
 
 // ======================================================
 // ===================== INDEX ROUTES ===================
