@@ -13,6 +13,39 @@ const path = require("path");
 const app = express();
 
 
+
+
+const storage = multer.diskStorage({
+
+destination: function(req, file, cb){
+
+cb(null, "uploads/");
+
+},
+
+filename: function(req, file, cb){
+
+cb(
+null,
+Date.now() + "-" + file.originalname
+);
+
+}
+
+});
+
+const upload = multer({
+storage
+});
+
+
+
+
+
+
+
+
+
 // ======================================================
 // ===================== MIDDLEWARE =====================
 // ======================================================
@@ -42,6 +75,25 @@ express.static(
 path.join(__dirname, "public")
 )
 );
+
+
+
+
+
+app.use("/uploads",
+express.static(
+path.join(__dirname, "uploads")
+));
+
+
+
+
+
+
+
+
+
+
 
 
 // ======================================================
@@ -334,63 +386,40 @@ error:"Delete failed"
 // ======================================================
 
 
-// ---------- UPLOAD MEDIA ----------
+let mediaItems = [];
+
+
 
 app.post(
 "/api/media",
-
-upload.single("file"),
-
-async(req,res)=>{
+upload.single("media"),
+(req,res)=>{
 
 try{
 
-if(!req.file){
+const media = {
 
-return res.status(400).json({
-error:"No file uploaded"
-});
+_id: Date.now(),
 
-}
+title: req.body.title || "TMI Media",
 
+description:
+req.body.description ||
+"Ministry Media",
 
-/* CLOUDINARY */
+url:
+`${req.protocol}://${req.get("host")}/uploads/${req.file.filename}`,
 
-const result =
-await cloudinary.uploader.upload(
-req.file.path,
-{
-resource_type:"auto",
-folder:"media"
-}
-);
+createdAt:new Date()
 
+};
 
-/* SAVE TO DATABASE */
+mediaItems.unshift(media);
 
-const media =
-new Media({
+res.json({
 
-title:req.body.title,
-
-description:req.body.description,
-
-type:req.body.type,
-
-url:result.secure_url
-
-});
-
-await media.save();
-
-
-/* SUCCESS */
-
-res.status(201).json({
-
-message:
-"Media uploaded successfully",
-
+success:true,
+message:"Media uploaded",
 media
 
 });
@@ -401,41 +430,8 @@ console.log(error);
 
 res.status(500).json({
 
-error:
-"Media upload failed"
-
-});
-
-}
-
-});
-
-
-
-
-// ---------- GET ALL MEDIA ----------
-
-app.get(
-"/api/media",
-async (req, res) => {
-
-try{
-
-const media =
-await Media.find()
-.sort({ createdAt:-1 });
-
-res.json(media);
-
-}catch(error){
-
-console.log(error);
-
-res.status(500).json({
-
 success:false,
-
-error:"Failed to fetch media"
+message:"Upload failed"
 
 });
 
@@ -445,48 +441,30 @@ error:"Failed to fetch media"
 
 
 
+app.get("/api/media",(req,res)=>{
 
-// ---------- DELETE MEDIA ----------
+res.json(mediaItems);
+
+});
+
+
 
 app.delete(
 "/api/media/:id",
-async (req, res) => {
+(req,res)=>{
 
-try{
-
-await Media.findByIdAndDelete(
-req.params.id
+mediaItems =
+mediaItems.filter(
+item=>item._id != req.params.id
 );
 
 res.json({
 
-success:true,
-
-message:"Media deleted"
+success:true
 
 });
 
-}catch(error){
-
-console.log(error);
-
-res.status(500).json({
-
-success:false,
-
-error:"Delete failed"
-
 });
-
-}
-
-});
-
-
-
-
-
-
 
 // ======================================================
 // ===================== INDEX ROUTES ===================
