@@ -1257,9 +1257,80 @@ app.post("/api/live", (req, res) => {
 
 
 
+/* =========================
+   HOMEPAGE
+========================= */
 
 
 
+let sermons = [
+  {
+    title: "Walking In Dominion",
+    description: "Understanding spiritual authority in Christ.",
+    youtubeId: "dQw4w9WgXcQ"
+  }
+];
+
+let blogs = [
+  {
+    title: "The Power Of Faith",
+    excerpt: "Faith is the currency of the Kingdom...",
+    image: "/uploads/blog.jpg",
+    url: "/blog.html"
+  }
+];
+
+let media = [
+  {
+    title: "Miracle Service",
+    image: "/uploads/media.jpg"
+  }
+];
+
+let announcements = [
+  {
+    text: "Sunday Service starts 9AM | Midweek Wednesday 5PM"
+  }
+];
+
+let stats = {
+  visitors: 1284,
+  liveViewers: 230,
+  radioListeners: 54
+};
+
+let live = {
+  youtubeId: "YOUR_LIVE_YOUTUBE_ID"
+};
+
+
+
+
+
+
+app.get("/api/home", (req, res) => {
+
+  res.json({
+
+    announcement:
+      announcements[0]?.text || "",
+
+    sermon:
+      sermons[0] || {},
+
+    blog:
+      blogs[0] || {},
+
+    media:
+      media[0] || {},
+
+    live,
+
+    stats
+
+  });
+
+});
 
 
 
