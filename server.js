@@ -1,6 +1,6 @@
 require("dotenv").config();
 
-const Sermon = require("./models/Sermon");
+
 const Blog = require("./models/Blog");
 const Media = require("./models/Media");
 const Announcement = require("./models/Announcement");
