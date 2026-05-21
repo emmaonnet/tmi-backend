@@ -1,9 +1,6 @@
 require("dotenv").config();
 
 
-const Blog = require("./models/Blog");
-const Media = require("./models/Media");
-const Announcement = require("./models/Announcement");
 
 
 
@@ -1263,99 +1260,6 @@ app.post("/api/live", (req, res) => {
 
 
 
-
-
-
-/* =========================
-   HOMEPAGE
-========================= */
-
-
-
-let sermons = [
-  {
-    title: "Walking In Dominion",
-    description: "Understanding spiritual authority in Christ.",
-    youtubeId: "dQw4w9WgXcQ"
-  }
-];
-
-let blogs = [
-  {
-    title: "The Power Of Faith",
-    excerpt: "Faith is the currency of the Kingdom...",
-    image: "/uploads/blog.jpg",
-    url: "/blog.html"
-  }
-];
-
-let media = [
-  {
-    title: "Miracle Service",
-    image: "/uploads/media.jpg"
-  }
-];
-
-let announcements = [
-  {
-    text: "Sunday Service starts 9AM | Midweek Wednesday 5PM"
-  }
-];
-
-let stats = {
-  visitors: 1284,
-  liveViewers: 230,
-  radioListeners: 54
-};
-
-let live = {
-  youtubeId: "YOUR_LIVE_YOUTUBE_ID"
-};
-
-
-
-
-
-
-app.get("/api/home", async (req, res) => {
-
-  try {
-
-    // SAFE FALLBACKS (prevents crash)
-    const Sermon = global.Sermon;
-    const Blog = global.Blog;
-    const Media = global.Media;
-    const Announcement = global.Announcement;
-
-    const sermons = Sermon ? await Sermon.find().sort({ _id: -1 }).limit(1) : [];
-    const blogs = Blog ? await Blog.find().sort({ _id: -1 }).limit(1) : [];
-    const media = Media ? await Media.find().sort({ _id: -1 }).limit(1) : [];
-    const announcements = Announcement ? await Announcement.find().sort({ _id: -1 }).limit(1) : [];
-
-    res.json({
-      sermon: sermons[0] || null,
-      blog: blogs[0] || null,
-      media: media[0] || null,
-      announcement: announcements[0] || null,
-      stats: {
-        visitors: 0,
-        liveViewers: 0,
-        radioListeners: 0
-      }
-    });
-
-  } catch (err) {
-
-    console.error("HOME API ERROR:", err);
-
-    res.status(500).json({
-      error: "Server failed",
-      message: err.message
-    });
-
-  }
-
-});
 
 
 
