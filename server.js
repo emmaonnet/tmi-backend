@@ -5,7 +5,7 @@ require("dotenv").config();
 
 
 
-const fs = require("fs");
+
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
@@ -21,55 +21,6 @@ const app = express();
 
 
 
-
-const DB_FILE = "./db.json";
-
-/* READ */
-function readDB(){
-  return JSON.parse(fs.readFileSync(DB_FILE));
-}
-
-/* WRITE */
-function writeDB(data){
-  fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2));
-}
-
-/* HOME API */
-app.get("/api/home", (req, res) => {
-  res.json(readDB());
-});
-
-/* UPDATE SERMON */
-app.post("/api/sermon", (req, res) => {
-  const db = readDB();
-  db.sermon = req.body;
-  writeDB(db);
-  res.json({success:true});
-});
-
-/* UPDATE BLOG */
-app.post("/api/blog", (req, res) => {
-  const db = readDB();
-  db.blog = req.body;
-  writeDB(db);
-  res.json({success:true});
-});
-
-/* UPDATE MEDIA */
-app.post("/api/media", (req, res) => {
-  const db = readDB();
-  db.media = req.body;
-  writeDB(db);
-  res.json({success:true});
-});
-
-/* UPDATE ANNOUNCEMENT */
-app.post("/api/announcement", (req, res) => {
-  const db = readDB();
-  db.announcement = req.body;
-  writeDB(db);
-  res.json({success:true});
-});
 
 
 
