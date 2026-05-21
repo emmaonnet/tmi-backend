@@ -1308,29 +1308,36 @@ let live = {
 
 
 
-app.get("/api/home", (req, res) => {
+app.get("/api/home", async (req, res) => {
 
-  res.json({
+  try {
 
-    announcement:
-      announcements[0]?.text || "",
+    const sermons = await Sermon.find().sort({ _id: -1 }).limit(1);
+    const blogs = await Blog.find().sort({ _id: -1 }).limit(1);
+    const media = await Media.find().sort({ _id: -1 }).limit(1);
+    const announcements = await Announcement.find().sort({ _id: -1 }).limit(1);
+    const stats = await Stats.findOne() || {
+      visitors: 0,
+      liveViewers: 0,
+      radioListeners: 0
+    };
 
-    sermon:
-      sermons[0] || {},
+    res.json({
+      sermon: sermons[0] || null,
+      blog: blogs[0] || null,
+      media: media[0] || null,
+      announcement: announcements[0] || null,
+      stats
+    });
 
-    blog:
-      blogs[0] || {},
-
-    media:
-      media[0] || {},
-
-    live,
-
-    stats
-
-  });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
 
 });
+
+
 
 
 
