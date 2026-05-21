@@ -1,0 +1,17 @@
+{
+"sermon": {
+"title": "Welcome Sermon",
+"description": "Powerful message",
+"youtubeId": "dQw4w9WgXcQ"
+  },
+"blog": {
+"title": "Faith Blog",
+"excerpt": "Growing in faith..."
+  },
+"media": {
+"title": "Church Highlights"
+  },
+"announcement": {
+"text": "Sunday Service 9AM | Midweek 5PM"
+  }
+}
