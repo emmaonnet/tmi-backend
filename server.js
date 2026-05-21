@@ -71,9 +71,6 @@ app.post("/api/announcement", (req, res) => {
   res.json({success:true});
 });
 
-app.listen(3000, () => {
-  console.log("Server running");
-});
 
 
 
