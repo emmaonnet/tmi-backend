@@ -1312,31 +1312,41 @@ app.get("/api/home", async (req, res) => {
 
   try {
 
-    const sermons = await Sermon.find().sort({ _id: -1 }).limit(1);
-    const blogs = await Blog.find().sort({ _id: -1 }).limit(1);
-    const media = await Media.find().sort({ _id: -1 }).limit(1);
-    const announcements = await Announcement.find().sort({ _id: -1 }).limit(1);
-    const stats = await Stats.findOne() || {
-      visitors: 0,
-      liveViewers: 0,
-      radioListeners: 0
-    };
+    // SAFE FALLBACKS (prevents crash)
+    const Sermon = global.Sermon;
+    const Blog = global.Blog;
+    const Media = global.Media;
+    const Announcement = global.Announcement;
+
+    const sermons = Sermon ? await Sermon.find().sort({ _id: -1 }).limit(1) : [];
+    const blogs = Blog ? await Blog.find().sort({ _id: -1 }).limit(1) : [];
+    const media = Media ? await Media.find().sort({ _id: -1 }).limit(1) : [];
+    const announcements = Announcement ? await Announcement.find().sort({ _id: -1 }).limit(1) : [];
 
     res.json({
       sermon: sermons[0] || null,
       blog: blogs[0] || null,
       media: media[0] || null,
       announcement: announcements[0] || null,
-      stats
+      stats: {
+        visitors: 0,
+        liveViewers: 0,
+        radioListeners: 0
+      }
     });
 
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+
+    console.error("HOME API ERROR:", err);
+
+    res.status(500).json({
+      error: "Server failed",
+      message: err.message
+    });
+
   }
 
 });
-
 
 
 
