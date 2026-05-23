@@ -1349,11 +1349,6 @@ app.post("/api/live/set", (req, res) => {
 
 
 
-/* =========================
-   🔑 YOUTUBE CONFIG
-========================= */
-const YOUTUBE_API_KEY = "YOUR_YOUTUBE_API_KEY_HERE";
-const CHANNEL_ID = "YOUR_CHANNEL_ID_HERE";
 
 /* =========================
    IPTV DATABASE
