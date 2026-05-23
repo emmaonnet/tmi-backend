@@ -1324,6 +1324,143 @@ app.post("/api/live/set", (req, res) => {
 
 
 
+const API_KEY = "YOUR_YOUTUBE_API_KEY";
+const CHANNEL_ID = "YOUR_YOUTUBE_CHANNEL_ID";
+
+/* ---------------------------
+   TV CHANNEL DATABASE
+----------------------------*/
+let tv = {
+  activeChannel: "live", // live | sermon | music | news
+  live: {
+    isLive: false,
+    videoId: null
+  },
+  sermon: {
+    videoId: "dQw4w9WgXcQ"
+  },
+  music: {
+    videoId: "dQw4w9WgXcQ"
+  },
+  news: {
+    videoId: "dQw4w9WgXcQ"
+  }
+};
+
+/* ---------------------------
+   AUTO LIVE DETECTION
+----------------------------*/
+async function detectLive() {
+
+  const url =
+`https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${CHANNEL_ID}&eventType=live&type=video&key=${API_KEY}`;
+
+  const res = await fetch(url);
+  const data = await res.json();
+
+  if (data.items && data.items.length > 0) {
+    tv.live = {
+      isLive: true,
+      videoId: data.items[0].id.videoId
+    };
+  } else {
+    tv.live.isLive = false;
+    tv.live.videoId = null;
+  }
+}
+
+/* ---------------------------
+   GET CURRENT TV OUTPUT
+----------------------------*/
+app.get("/api/tv", async (req, res) => {
+
+  await detectLive();
+
+  let output;
+
+  switch(tv.activeChannel){
+
+    case "live":
+      output = tv.live.isLive
+        ? tv.live
+        : { offline: true };
+      break;
+
+    case "sermon":
+      output = tv.sermon;
+      break;
+
+    case "music":
+      output = tv.music;
+      break;
+
+    case "news":
+      output = tv.news;
+      break;
+
+    default:
+      output = { offline: true };
+
+  }
+
+  res.json({
+    channel: tv.activeChannel,
+    output
+  });
+
+});
+
+/* ---------------------------
+   SWITCH CHANNEL (ADMIN)
+----------------------------*/
+app.post("/api/tv/switch", (req, res) => {
+
+  tv.activeChannel = req.body.channel;
+
+  res.json({
+    success: true,
+    activeChannel: tv.activeChannel
+  });
+
+});
+
+/* ---------------------------
+   UPDATE SERMON / MUSIC / NEWS
+----------------------------*/
+app.post("/api/tv/update", (req, res) => {
+
+  const { type, videoId } = req.body;
+
+  tv[type].videoId = videoId;
+
+  res.json({ success: true });
+
+});
+
+/* SERVER */
+app.listen(3000, () => {
+  console.log("TV System Running");
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
