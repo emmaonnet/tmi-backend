@@ -1350,15 +1350,23 @@ app.post("/api/live/set", (req, res) => {
 
 
 
+
+
+
+
 /* =========================
-   IPTV DATABASE
+   🔴 IPTV STATE (DATABASE)
 ========================= */
 let tv = {
   activeChannel: "live",
 
   live: {
-    isLive: false,
-    videoId: null
+    enabled: false,      // 🔴 manual ON/OFF
+    videoId: ""          // 🔴 admin live video
+  },
+
+  fallback: {
+    videoId: "dQw4w9WgXcQ" // 🔥 fallback sermon/music
   },
 
   sermon: {
@@ -1374,50 +1382,33 @@ let tv = {
   }
 };
 
-/* =========================
-   🔴 AUTO DETECT LIVE STREAM
-========================= */
-async function detectLiveStream() {
 
-  const url =
-`https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${CHANNEL_ID}&eventType=live&type=video&key=${YOUTUBE_API_KEY}`;
-
-  const res = await fetch(url);
-  const data = await res.json();
-
-  if (data.items && data.items.length > 0) {
-
-    tv.live.isLive = true;
-    tv.live.videoId = data.items[0].id.videoId;
-
-  } else {
-
-    tv.live.isLive = false;
-    tv.live.videoId = null;
-
-  }
-}
-
-
-
-/* =========================
-   📺 GET TV OUTPUT
-========================= */
-app.get("/api/tv", async (req, res) => {
-
-  await detectLiveStream(); // MUST be awaited
+app.get("/api/tv", (req, res) => {
 
   let output;
 
-  switch (tv.activeChannel) {
+  switch(tv.activeChannel){
 
     case "live":
-      output = tv.live.isLive
-        ? {
-            isLive: true,
-            videoId: tv.live.videoId
-          }
-        : { offline: true };
+
+      if(tv.live.enabled && tv.live.videoId){
+
+        output = {
+          isLive: true,
+          videoId: tv.live.videoId
+        };
+
+      } else {
+
+        // fallback instead of "offline"
+        output = {
+          isLive: false,
+          videoId: tv.fallback.videoId,
+          fallback: true
+        };
+
+      }
+
       break;
 
     case "sermon":
@@ -1433,7 +1424,8 @@ app.get("/api/tv", async (req, res) => {
       break;
 
     default:
-      output = { offline: true };
+      output = tv.fallback;
+
   }
 
   res.json({
@@ -1444,41 +1436,38 @@ app.get("/api/tv", async (req, res) => {
 });
 
 
-/* =========================
-   🎛️ SWITCH CHANNEL
-========================= */
-app.post("/api/tv/switch", (req, res) => {
+app.post("/api/live/toggle", (req, res) => {
 
-  const { channel } = req.body;
-
-  if (!tv[channel]) {
-    return res.status(400).json({ error: "Invalid channel" });
-  }
-
-  tv.activeChannel = channel;
+  tv.live.enabled = !tv.live.enabled;
 
   res.json({
     success: true,
-    activeChannel: channel
+    live: tv.live.enabled
   });
 
 });
 
-/* =========================
-   ✏️ UPDATE SERMON / MUSIC / NEWS
-========================= */
+
+app.post("/api/live/set", (req, res) => {
+
+  const { videoId } = req.body;
+
+  tv.live.videoId = videoId;
+
+  res.json({
+    success: true,
+    message: "Live video updated"
+  });
+
+});
+
+
 app.post("/api/tv/update", (req, res) => {
 
   const { type, videoId } = req.body;
 
-  if (type === "live") {
-    return res.status(400).json({
-      error: "Live is controlled by YouTube API"
-    });
-  }
-
-  if (!tv[type]) {
-    return res.status(400).json({ error: "Invalid type" });
+  if(!tv[type]){
+    return res.status(400).json({ error: "Invalid channel" });
   }
 
   tv[type].videoId = videoId;
@@ -1490,53 +1479,6 @@ app.post("/api/tv/update", (req, res) => {
   });
 
 });
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-app.get("/api/test-live", async (req, res) => {
-
-  try {
-
-    const url =
-`https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${CHANNEL_ID}&eventType=live&type=video&key=${YOUTUBE_API_KEY}`;
-
-    const response = await fetch(url);
-    const data = await response.json();
-
-    res.json({
-      status: "ok",
-      resultCount: data.items ? data.items.length : 0,
-      raw: data
-    });
-
-  } catch (err) {
-
-    res.status(500).json({
-      status: "error",
-      message: err.message
-    });
-
-  }
-
-});
-
-
 
 
 
