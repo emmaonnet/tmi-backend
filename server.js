@@ -1379,40 +1379,33 @@ let tv = {
 ========================= */
 async function detectLiveStream() {
 
-  try {
-
-    const url =
+  const url =
 `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${CHANNEL_ID}&eventType=live&type=video&key=${YOUTUBE_API_KEY}`;
 
-    const res = await fetch(url);
-    const data = await res.json();
+  const res = await fetch(url);
+  const data = await res.json();
 
-    if (data.items && data.items.length > 0) {
+  if (data.items && data.items.length > 0) {
 
-      tv.live.isLive = true;
-      tv.live.videoId = data.items[0].id.videoId;
+    tv.live.isLive = true;
+    tv.live.videoId = data.items[0].id.videoId;
 
-    } else {
-
-      tv.live.isLive = false;
-      tv.live.videoId = null;
-
-    }
-
-  } catch (err) {
-    console.log("Live detection error:", err.message);
+  } else {
 
     tv.live.isLive = false;
     tv.live.videoId = null;
+
   }
 }
+
+
 
 /* =========================
    📺 GET TV OUTPUT
 ========================= */
 app.get("/api/tv", async (req, res) => {
 
-  await detectLiveStream();
+  await detectLiveStream(); // MUST be awaited
 
   let output;
 
@@ -1420,7 +1413,10 @@ app.get("/api/tv", async (req, res) => {
 
     case "live":
       output = tv.live.isLive
-        ? tv.live
+        ? {
+            isLive: true,
+            videoId: tv.live.videoId
+          }
         : { offline: true };
       break;
 
@@ -1446,6 +1442,7 @@ app.get("/api/tv", async (req, res) => {
   });
 
 });
+
 
 /* =========================
    🎛️ SWITCH CHANNEL
