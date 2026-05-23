@@ -20,6 +20,11 @@ const app = express();
 
 
 
+/* =========================
+   🔑 YOUTUBE CONFIG
+========================= */
+const YOUTUBE_API_KEY = "AIzaSyBH8V_WJQFse4Ga-Ga9OcXq5NUwip3db_0";
+const CHANNEL_ID = "UC450v4_ksQH3IeLwNKlm5tQ";
 
 
 
