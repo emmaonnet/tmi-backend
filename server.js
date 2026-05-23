@@ -1278,6 +1278,63 @@ app.post("/api/live", (req, res) => {
 
 
 
+
+
+
+
+let db = {
+  live: {
+    isLive: false,
+    youtubeEmbed: "https://www.youtube.com/embed/dQw4w9WgXcQ"
+  }
+};
+
+app.get("/api/live", (req, res) => {
+  res.json(db.live);
+});
+
+app.post("/api/live/toggle", (req, res) => {
+
+  db.live.isLive = !db.live.isLive;
+
+  res.json({
+    success: true,
+    isLive: db.live.isLive
+  });
+
+});
+app.post("/api/live/set", (req, res) => {
+
+  db.live.youtubeEmbed = req.body.youtubeEmbed;
+
+  res.json({ success: true });
+
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 /* =========================
    TEST ROUTE
 ========================= */
