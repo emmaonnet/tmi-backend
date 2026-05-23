@@ -1497,6 +1497,66 @@ app.post("/api/tv/update", (req, res) => {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+app.get("/api/test-live", async (req, res) => {
+
+  try {
+
+    const url =
+`https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${CHANNEL_ID}&eventType=live&type=video&key=${YOUTUBE_API_KEY}`;
+
+    const response = await fetch(url);
+    const data = await response.json();
+
+    res.json({
+      status: "ok",
+      resultCount: data.items ? data.items.length : 0,
+      raw: data
+    });
+
+  } catch (err) {
+
+    res.status(500).json({
+      status: "error",
+      message: err.message
+    });
+
+  }
+
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 /* =========================
    TEST ROUTE
 ========================= */
