@@ -1466,9 +1466,15 @@ app.listen(3000, () => {
 
 
 
-/* -----------------------------
-   IPTV DATABASE (IN MEMORY)
-------------------------------*/
+/* =========================
+   🔑 YOUTUBE CONFIG
+========================= */
+const YOUTUBE_API_KEY = "YOUR_YOUTUBE_API_KEY_HERE";
+const CHANNEL_ID = "YOUR_CHANNEL_ID_HERE";
+
+/* =========================
+   IPTV DATABASE
+========================= */
 let tv = {
   activeChannel: "live",
 
@@ -1490,10 +1496,45 @@ let tv = {
   }
 };
 
-/* -----------------------------
-   GET CURRENT TV STATE
-------------------------------*/
-app.get("/api/tv", (req, res) => {
+/* =========================
+   🔴 AUTO DETECT LIVE STREAM
+========================= */
+async function detectLiveStream() {
+
+  try {
+
+    const url =
+`https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${CHANNEL_ID}&eventType=live&type=video&key=${YOUTUBE_API_KEY}`;
+
+    const res = await fetch(url);
+    const data = await res.json();
+
+    if (data.items && data.items.length > 0) {
+
+      tv.live.isLive = true;
+      tv.live.videoId = data.items[0].id.videoId;
+
+    } else {
+
+      tv.live.isLive = false;
+      tv.live.videoId = null;
+
+    }
+
+  } catch (err) {
+    console.log("Live detection error:", err.message);
+
+    tv.live.isLive = false;
+    tv.live.videoId = null;
+  }
+}
+
+/* =========================
+   📺 GET TV OUTPUT
+========================= */
+app.get("/api/tv", async (req, res) => {
+
+  await detectLiveStream();
 
   let output;
 
@@ -1519,7 +1560,6 @@ app.get("/api/tv", (req, res) => {
 
     default:
       output = { offline: true };
-
   }
 
   res.json({
@@ -1529,14 +1569,14 @@ app.get("/api/tv", (req, res) => {
 
 });
 
-/* -----------------------------
-   SWITCH CHANNEL (ADMIN)
-------------------------------*/
+/* =========================
+   🎛️ SWITCH CHANNEL
+========================= */
 app.post("/api/tv/switch", (req, res) => {
 
   const { channel } = req.body;
 
-  if (!["live", "sermon", "music", "news"].includes(channel)) {
+  if (!tv[channel]) {
     return res.status(400).json({ error: "Invalid channel" });
   }
 
@@ -1544,27 +1584,26 @@ app.post("/api/tv/switch", (req, res) => {
 
   res.json({
     success: true,
-    activeChannel: tv.activeChannel
+    activeChannel: channel
   });
 
 });
 
-/* -----------------------------
-   UPDATE SERMON / MUSIC / NEWS
-   (MANUAL VIDEO ID INPUT)
-------------------------------*/
+/* =========================
+   ✏️ UPDATE SERMON / MUSIC / NEWS
+========================= */
 app.post("/api/tv/update", (req, res) => {
 
   const { type, videoId } = req.body;
 
-  if (!tv[type]) {
-    return res.status(400).json({ error: "Invalid channel type" });
-  }
-
   if (type === "live") {
     return res.status(400).json({
-      error: "Live channel is controlled separately"
+      error: "Live is controlled by YouTube API"
     });
+  }
+
+  if (!tv[type]) {
+    return res.status(400).json({ error: "Invalid type" });
   }
 
   tv[type].videoId = videoId;
@@ -1577,231 +1616,14 @@ app.post("/api/tv/update", (req, res) => {
 
 });
 
-/* -----------------------------
-   SET LIVE STREAM (OPTIONAL MANUAL CONTROL)
-------------------------------*/
-app.post("/api/live/set", (req, res) => {
-
-  const { videoId } = req.body;
-
-  tv.live.videoId = videoId;
-  tv.live.isLive = true;
-
-  res.json({
-    success: true,
-    message: "Live stream updated"
-  });
-
-});
-
-/* -----------------------------
-   TURN LIVE ON / OFF
-------------------------------*/
-app.post("/api/live/toggle", (req, res) => {
-
-  tv.live.isLive = !tv.live.isLive;
-
-  res.json({
-    success: true,
-    isLive: tv.live.isLive
-  });
-
-});
-
-/* -----------------------------
-   START SERVER
-------------------------------*/
+/* =========================
+   🚀 START SERVER
+========================= */
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
-  console.log("IPTV Broadcast System running on port", PORT);
+  console.log("IPTV system running on port", PORT);
 });
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/* -----------------------------
-   IPTV DATABASE (IN MEMORY)
-------------------------------*/
-let tv = {
-  activeChannel: "live",
-
-  live: {
-    isLive: false,
-    videoId: null
-  },
-
-  sermon: {
-    videoId: ""
-  },
-
-  music: {
-    videoId: ""
-  },
-
-  news: {
-    videoId: ""
-  }
-};
-
-/* -----------------------------
-   GET CURRENT TV STATE
-------------------------------*/
-app.get("/api/tv", (req, res) => {
-
-  let output;
-
-  switch (tv.activeChannel) {
-
-    case "live":
-      output = tv.live.isLive
-        ? tv.live
-        : { offline: true };
-      break;
-
-    case "sermon":
-      output = tv.sermon;
-      break;
-
-    case "music":
-      output = tv.music;
-      break;
-
-    case "news":
-      output = tv.news;
-      break;
-
-    default:
-      output = { offline: true };
-
-  }
-
-  res.json({
-    channel: tv.activeChannel,
-    output
-  });
-
-});
-
-/* -----------------------------
-   SWITCH CHANNEL (ADMIN)
-------------------------------*/
-app.post("/api/tv/switch", (req, res) => {
-
-  const { channel } = req.body;
-
-  if (!["live", "sermon", "music", "news"].includes(channel)) {
-    return res.status(400).json({ error: "Invalid channel" });
-  }
-
-  tv.activeChannel = channel;
-
-  res.json({
-    success: true,
-    activeChannel: tv.activeChannel
-  });
-
-});
-
-/* -----------------------------
-   UPDATE SERMON / MUSIC / NEWS
-   (MANUAL VIDEO ID INPUT)
-------------------------------*/
-app.post("/api/tv/update", (req, res) => {
-
-  const { type, videoId } = req.body;
-
-  if (!tv[type]) {
-    return res.status(400).json({ error: "Invalid channel type" });
-  }
-
-  if (type === "live") {
-    return res.status(400).json({
-      error: "Live channel is controlled separately"
-    });
-  }
-
-  tv[type].videoId = videoId;
-
-  res.json({
-    success: true,
-    type,
-    videoId
-  });
-
-});
-
-/* -----------------------------
-   SET LIVE STREAM (OPTIONAL MANUAL CONTROL)
-------------------------------*/
-app.post("/api/live/set", (req, res) => {
-
-  const { videoId } = req.body;
-
-  tv.live.videoId = videoId;
-  tv.live.isLive = true;
-
-  res.json({
-    success: true,
-    message: "Live stream updated"
-  });
-
-});
-
-/* -----------------------------
-   TURN LIVE ON / OFF
-------------------------------*/
-app.post("/api/live/toggle", (req, res) => {
-
-  tv.live.isLive = !tv.live.isLive;
-
-  res.json({
-    success: true,
-    isLive: tv.live.isLive
-  });
-
-});
-
-/* -----------------------------
-   START SERVER
-------------------------------*/
-const PORT = process.env.PORT || 3000;
-
-app.listen(PORT, () => {
-  console.log("IPTV Broadcast System running on port", PORT);
-});
-
-
-
-
-
-
 
 
 
