@@ -1,31 +1,61 @@
-require("dotenv").config();
 
-
-
-
-
-
+const fs = require("fs");
 
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
-const multer = require("multer");
-const cloudinary = require("cloudinary").v2;
+@@ -22,1364 +22,1315 @@
 
 
 
-const path = require("path");
+const DB_FILE = "./db.json";
 
-const app = express();
+/* READ */
+function readDB(){
+  return JSON.parse(fs.readFileSync(DB_FILE));
+}
 
+/* WRITE */
+function writeDB(data){
+  fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2));
+}
 
+/* HOME API */
+app.get("/api/home", (req, res) => {
+  res.json(readDB());
+});
 
-/* =========================
-   🔑 YOUTUBE CONFIG
-========================= */
-const YOUTUBE_API_KEY = "AIzaSyBH8V_WJQFse4Ga-Ga9OcXq5NUwip3db_0";
-const CHANNEL_ID = "UC450v4_ksQH3IeLwNKlm5tQ";
+/* UPDATE SERMON */
+app.post("/api/sermon", (req, res) => {
+  const db = readDB();
+  db.sermon = req.body;
+  writeDB(db);
+  res.json({success:true});
+});
 
+/* UPDATE BLOG */
+app.post("/api/blog", (req, res) => {
+  const db = readDB();
+  db.blog = req.body;
+  writeDB(db);
+  res.json({success:true});
+});
+
+/* UPDATE MEDIA */
+app.post("/api/media", (req, res) => {
+  const db = readDB();
+  db.media = req.body;
+  writeDB(db);
+  res.json({success:true});
+});
+
+/* UPDATE ANNOUNCEMENT */
+app.post("/api/announcement", (req, res) => {
+  const db = readDB();
+  db.announcement = req.body;
+  writeDB(db);
+  res.json({success:true});
+});
 
 
 
@@ -1283,219 +1313,6 @@ app.post("/api/live", (req, res) => {
 
 
 
-
-
-
-
-let db = {
-  live: {
-    isLive: false,
-    youtubeEmbed: "https://www.youtube.com/embed/dQw4w9WgXcQ"
-  }
-};
-
-app.get("/api/live", (req, res) => {
-  res.json(db.live);
-});
-
-app.post("/api/live/toggle", (req, res) => {
-
-  db.live.isLive = !db.live.isLive;
-
-  res.json({
-    success: true,
-    isLive: db.live.isLive
-  });
-
-});
-app.post("/api/live/set", (req, res) => {
-
-  db.live.youtubeEmbed = req.body.youtubeEmbed;
-
-  res.json({ success: true });
-
-});
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/* =========================
-   🔴 IPTV STATE (DATABASE)
-========================= */
-let tv = {
-  activeChannel: "live",
-
-  live: {
-    enabled: false,      // 🔴 manual ON/OFF
-    videoId: ""          // 🔴 admin live video
-  },
-
-  fallback: {
-    videoId: "dQw4w9WgXcQ" // 🔥 fallback sermon/music
-  },
-
-  sermon: {
-    videoId: ""
-  },
-
-  music: {
-    videoId: ""
-  },
-
-  news: {
-    videoId: ""
-  }
-};
-
-
-app.get("/api/tv", (req, res) => {
-
-  let output;
-
-  switch(tv.activeChannel){
-
-    case "live":
-
-      if(tv.live.enabled && tv.live.videoId){
-
-        output = {
-          isLive: true,
-          videoId: tv.live.videoId
-        };
-
-      } else {
-
-        // fallback instead of "offline"
-        output = {
-          isLive: false,
-          videoId: tv.fallback.videoId,
-          fallback: true
-        };
-
-      }
-
-      break;
-
-    case "sermon":
-      output = tv.sermon;
-      break;
-
-    case "music":
-      output = tv.music;
-      break;
-
-    case "news":
-      output = tv.news;
-      break;
-
-    default:
-      output = tv.fallback;
-
-  }
-
-  res.json({
-    channel: tv.activeChannel,
-    output
-  });
-
-});
-
-
-app.post("/api/live/toggle", (req, res) => {
-
-  tv.live.enabled = !tv.live.enabled;
-
-  res.json({
-    success: true,
-    live: tv.live.enabled
-  });
-
-});
-
-
-app.post("/api/live/set", (req, res) => {
-
-  const { videoId } = req.body;
-
-  tv.live.videoId = videoId;
-
-  res.json({
-    success: true,
-    message: "Live video updated"
-  });
-
-});
-
-
-app.post("/api/tv/update", (req, res) => {
-
-  const { type, videoId } = req.body;
-
-  if(!tv[type]){
-    return res.status(400).json({ error: "Invalid channel" });
-  }
-
-  tv[type].videoId = videoId;
-
-  res.json({
-    success: true,
-    type,
-    videoId
-  });
-
-});
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /* =========================
    TEST ROUTE
 ========================= */
@@ -1551,4 +1368,4 @@ console.log(
 
 
 
-
+~
