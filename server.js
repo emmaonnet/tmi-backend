@@ -1472,6 +1472,47 @@ app.post("/api/live", (req, res) => {
 
 
 
+/* =========================
+   IPTV LIVE DATA
+========================= */
+
+global.liveTV = global.liveTV || {
+  videoId: "",
+  enabled: false
+};
+
+/* =========================
+   UPDATE LIVE SETTINGS
+========================= */
+
+app.post("/api/live/update", (req,res)=>{
+
+  const { videoId, enabled } = req.body;
+
+  if(videoId !== undefined){
+    global.liveTV.videoId = videoId;
+  }
+
+  if(enabled !== undefined){
+    global.liveTV.enabled = enabled;
+  }
+
+  res.json({
+    status:"ok",
+    liveTV: global.liveTV
+  });
+
+});
+
+/* =========================
+   GET LIVE SETTINGS
+========================= */
+
+app.get("/api/live", (req,res)=>{
+
+  res.json(global.liveTV);
+
+});
 
 
 
