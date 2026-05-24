@@ -1,9 +1,23 @@
+require("dotenv").config();
+
+
+
+
+
 
 const fs = require("fs");
-
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
+const multer = require("multer");
+const cloudinary = require("cloudinary").v2;
+
+
+
+const path = require("path");
+
+const app = express();
+
 
 
 
@@ -20,7 +34,10 @@ function writeDB(data){
   fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2));
 }
 
-
+/* HOME API */
+app.get("/api/home", (req, res) => {
+  res.json(readDB());
+});
 
 /* UPDATE SERMON */
 app.post("/api/sermon", (req, res) => {
@@ -54,6 +71,9 @@ app.post("/api/announcement", (req, res) => {
   res.json({success:true});
 });
 
+app.listen(3000, () => {
+  console.log("Server running");
+});
 
 
 
@@ -1361,8 +1381,3 @@ console.log(
 );
 
 });
-
-
-
-
-
