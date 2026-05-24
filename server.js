@@ -1330,6 +1330,119 @@ app.post("/api/live", (req, res) => {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/****************************************************
+ * 📺 YOUTUBE LIVE EXTENSION (NON-BREAKING ADD-ON)
+ * Supports:
+ * - Channel ID (recommended live mode)
+ * - Video ID (legacy mode)
+ ****************************************************/
+
+let tv = tv || {}; // safety if tv already exists
+
+tv.youtubeLive = {
+  mode: "channel",   // "channel" | "video"
+  value: "",         // channelId OR videoId
+  enabled: true
+};
+
+/* =========================
+   🎛️ UPDATE YOUTUBE LIVE
+========================= */
+app.post("/api/youtube/live", (req, res) => {
+
+  const { mode, value, enabled } = req.body;
+
+  if (mode) tv.youtubeLive.mode = mode;
+  if (value) tv.youtubeLive.value = value;
+  if (typeof enabled === "boolean") tv.youtubeLive.enabled = enabled;
+
+  res.json({
+    status: "ok",
+    youtubeLive: tv.youtubeLive
+  });
+
+});
+
+
+/* =========================
+   📺 GENERATE YOUTUBE URL
+========================= */
+function getYouTubeLiveUrl() {
+
+  if (!tv.youtubeLive.enabled) {
+    return null;
+  }
+
+  // 🔴 CHANNEL MODE (BEST FOR LIVE)
+  if (tv.youtubeLive.mode === "channel") {
+    return `https://www.youtube.com/embed/live_stream?channel=${tv.youtubeLive.value}`;
+  }
+
+  // 🎬 VIDEO MODE (LEGACY)
+  return `https://www.youtube.com/embed/${tv.youtubeLive.value}`;
+}
+
+
+/* =========================
+   📡 ADD TO YOUR EXISTING TV API
+   (DO NOT REPLACE YOUR OLD ONE)
+========================= */
+app.get("/api/youtube/preview", (req, res) => {
+
+  res.json({
+    mode: tv.youtubeLive.mode,
+    enabled: tv.youtubeLive.enabled,
+    url: getYouTubeLiveUrl()
+  });
+
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 /* =========================
    TEST ROUTE
 ========================= */
