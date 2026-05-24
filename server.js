@@ -20,10 +20,7 @@ function writeDB(data){
   fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2));
 }
 
-/* HOME API */
-app.get("/api/home", (req, res) => {
-  res.json(readDB());
-});
+
 
 /* UPDATE SERMON */
 app.post("/api/sermon", (req, res) => {
