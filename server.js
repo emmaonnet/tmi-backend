@@ -1226,23 +1226,27 @@ error:
 
 
 /****************************************************
- * 📺 YOUTUBE LIVE EXTENSION (NON-BREAKING ADD-ON)
- * Supports:
- * - Channel ID (recommended live mode)
- * - Video ID (legacy mode)
+ * 📺 SAFE IPTV STATE (NO INITIALIZATION ERRORS)
+ * Compatible with existing backend
  ****************************************************/
 
-let tv = tv || {}; // safety if tv already exists
+// Ensure global state exists (SAFE for old/new code)
+global.tv = global.tv || {};
 
-tv.youtubeLive = {
+// Ensure YouTube object exists
+global.tv.youtubeLive = global.tv.youtubeLive || {
   mode: "channel",   // "channel" | "video"
-  value: "",         // channelId OR videoId
+  value: "",
   enabled: true
 };
 
-/* =========================
-   🎛️ UPDATE YOUTUBE LIVE
-========================= */
+// Shortcut reference
+const tv = global.tv;
+
+
+/****************************************************
+ * 🎛️ UPDATE YOUTUBE LIVE SETTINGS
+ ****************************************************/
 app.post("/api/youtube/live", (req, res) => {
 
   const { mode, value, enabled } = req.body;
@@ -1259,42 +1263,39 @@ app.post("/api/youtube/live", (req, res) => {
 });
 
 
-/* =========================
-   📺 GENERATE YOUTUBE URL
-========================= */
+/****************************************************
+ * 📺 GET YOUTUBE LIVE EMBED URL
+ ****************************************************/
 function getYouTubeLiveUrl() {
 
   if (!tv.youtubeLive.enabled) {
     return null;
   }
 
-  // 🔴 CHANNEL MODE (BEST FOR LIVE)
+  // 🔴 CHANNEL MODE (BEST PRACTICE)
   if (tv.youtubeLive.mode === "channel") {
     return `https://www.youtube.com/embed/live_stream?channel=${tv.youtubeLive.value}`;
   }
 
-  // 🎬 VIDEO MODE (LEGACY)
+  // 🎬 VIDEO MODE (LEGACY SUPPORT)
   return `https://www.youtube.com/embed/${tv.youtubeLive.value}`;
 }
 
 
-/* =========================
-   📡 ADD TO YOUR EXISTING TV API
-   (DO NOT REPLACE YOUR OLD ONE)
-========================= */
+/****************************************************
+ * 📡 PREVIEW ENDPOINT (SAFE DEBUG TOOL)
+ ****************************************************/
 app.get("/api/youtube/preview", (req, res) => {
 
   res.json({
+    status: "ok",
     mode: tv.youtubeLive.mode,
     enabled: tv.youtubeLive.enabled,
+    channelOrVideo: tv.youtubeLive.value,
     url: getYouTubeLiveUrl()
   });
 
 });
-
-
-
-
 
 
 
