@@ -1558,6 +1558,112 @@ app.get("/api/live", (req,res)=>{
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* =========================
+   YOUTUBE IPTV SYSTEM
+========================= */
+
+
+
+const YOUTUBE_FILE =
+  path.join(__dirname, "youtube.json");
+
+/* READ DATA */
+
+function readYoutube(){
+
+  try{
+
+    return JSON.parse(
+      fs.readFileSync(YOUTUBE_FILE, "utf8")
+    );
+
+  }
+
+  catch(err){
+
+    return {
+      videoId:"",
+      title:"LIVE BROADCAST",
+      status:"offline"
+    };
+
+  }
+
+}
+
+/* SAVE DATA */
+
+function saveYoutube(data){
+
+  fs.writeFileSync(
+    YOUTUBE_FILE,
+    JSON.stringify(data, null, 2)
+  );
+
+}
+
+/* GET DATA */
+
+app.get("/api/youtube", (req,res)=>{
+
+  res.json(readYoutube());
+
+});
+
+/* UPDATE DATA */
+
+app.post("/api/youtube", (req,res)=>{
+
+  saveYoutube(req.body);
+
+  res.json({
+    success:true
+  });
+
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 /* =========================
    TEST ROUTE
 ========================= */
