@@ -1522,6 +1522,123 @@ app.get("/api/live", (req,res)=>{
 
 
 
+
+
+
+
+
+
+
+
+
+
+const FILE = "./channels.json";
+
+/* =========================
+   HELPERS
+========================= */
+
+function readChannels(){
+  return JSON.parse(fs.readFileSync(FILE, "utf8"));
+}
+
+function saveChannels(data){
+  fs.writeFileSync(FILE, JSON.stringify(data, null, 2));
+}
+
+/* =========================
+   GET CHANNELS
+========================= */
+
+app.get("/api/channels", (req, res)=>{
+  res.json(readChannels());
+});
+
+/* =========================
+   UPDATE ALL CHANNELS
+========================= */
+
+app.post("/api/channels", (req, res)=>{
+  saveChannels(req.body);
+  res.json({ ok:true });
+});
+
+/* =========================
+   SET ACTIVE CHANNEL
+========================= */
+
+app.post("/api/active", (req, res)=>{
+
+  let { index } = req.body;
+
+  let channels = readChannels();
+
+  channels.forEach((c,i)=>{
+    c.active = (i === index);
+  });
+
+  saveChannels(channels);
+
+  res.json({ ok:true });
+});
+
+/* =========================
+   UPDATE SINGLE CHANNEL VIDEO
+========================= */
+
+app.post("/api/update-video", (req, res)=>{
+
+  let { index, videoId, status } = req.body;
+
+  let channels = readChannels();
+
+  if(channels[index]){
+    channels[index].videoId = videoId;
+    channels[index].status = status;
+  }
+
+  saveChannels(channels);
+
+  res.json({ ok:true });
+});
+
+module.exports = app;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 /* =========================
    TEST ROUTE
 ========================= */
