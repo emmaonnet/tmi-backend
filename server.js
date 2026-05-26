@@ -1645,6 +1645,91 @@ app.post("/api/youtube", (req,res)=>{
 
 
 
+/* =========================
+   YOUTUBE IPTV SAFE API
+   (DROP-IN ADDON - DO NOT REMOVE EXISTING CODE)
+========================= */
+
+
+
+
+
+/* Ensure file exists */
+if (!fs.existsSync(YOUTUBE_FILE)) {
+  fs.writeFileSync(
+    YOUTUBE_FILE,
+    JSON.stringify({
+      videoId: "",
+      status: "offline"
+    }, null, 2)
+  );
+}
+
+/* =========================
+   READ DATA
+========================= */
+function getYoutubeData() {
+  try {
+    const data = fs.readFileSync(YOUTUBE_FILE, "utf8");
+    return JSON.parse(data);
+  } catch (err) {
+    return { videoId: "", status: "offline" };
+  }
+}
+
+/* =========================
+   SAVE DATA
+========================= */
+function saveYoutubeData(data) {
+  fs.writeFileSync(
+    YOUTUBE_FILE,
+    JSON.stringify(data, null, 2)
+  );
+}
+
+/* =========================
+   GET CURRENT LIVE DATA
+========================= */
+app.get("/api/youtube", (req, res) => {
+  res.json(getYoutubeData());
+});
+
+/* =========================
+   UPDATE VIDEO ID (ADMIN PUSH)
+========================= */
+app.post("/api/youtube", (req, res) => {
+  const { videoId, status } = req.body;
+
+  if (!videoId) {
+    return res.status(400).json({
+      success: false,
+      message: "videoId required"
+    });
+  }
+
+  const data = {
+    videoId,
+    status: status || "live",
+    updatedAt: new Date().toISOString()
+  };
+
+  saveYoutubeData(data);
+
+  res.json({
+    success: true,
+    data
+  });
+});
+
+/* =========================
+   HEALTH CHECK (IMPORTANT DEBUG TOOL)
+========================= */
+app.get("/api/health", (req, res) => {
+  res.json({
+    status: "OK",
+    time: new Date().toISOString()
+  });
+});
 
 
 
