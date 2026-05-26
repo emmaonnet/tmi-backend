@@ -1,0 +1,16 @@
+[
+  {
+"name": "Main Channel",
+"channelId": "UC_MAIN_ID",
+"videoId": "",
+"status": "offline",
+"active": true
+  },
+  {
+"name": "Music Channel",
+"channelId": "UC_MUSIC_ID",
+"videoId": "",
+"status": "offline",
+"active": false
+  }
+]
