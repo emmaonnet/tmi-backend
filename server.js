@@ -1749,7 +1749,7 @@ app.get("/api/health", (req, res) => {
 
 
 const CHANNEL_ID = "UC450v4_ksQH3IeLwNKlm5tQ";
-const API_KEY = "AIzaSyBH8V_WJQFse4Ga-Ga9OcXq5NUwip3db_0";
+const API_KEY = "AIzaSyByFnFaXSO_LjTN0dPiPwy8St8ivn5HACg";
 
 /* ---------------- LIVE DETECTION ---------------- */
 app.get("/api/detect-live", async (req, res) => {
