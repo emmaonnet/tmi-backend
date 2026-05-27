@@ -1748,6 +1748,75 @@ app.get("/api/health", (req, res) => {
 
 
 
+const http = require("http");
+const { Server } = require("socket.io");
+
+
+const server = http.createServer(app);
+
+const io = new Server(server, {
+    cors: { origin: "*" }
+});
+
+
+
+/* 🔥 PUT YOUR CHANNEL ID HERE */
+const CHANNEL_ID = "UC450v4_ksQH3IeLwNKlm5tQ";
+
+/* CURRENT STREAM STATE */
+let currentStream = null;
+
+/* ---------------- SOCKET ---------------- */
+io.on("connection", (socket) => {
+    console.log("User connected:", socket.id);
+
+    if (currentStream) {
+        socket.emit("stream-update", currentStream);
+    }
+});
+
+/* ---------------- LIVE DETECTION API ---------------- */
+/* THIS is where CHANNEL_ID is actually used */
+app.get("/api/detect-live", async (req, res) => {
+
+    try {
+
+        // 🔥 HERE YOU USE CHANNEL_ID TO CALL YOUTUBE API
+        // Example placeholder response:
+
+        const fakeLiveVideoId = "dQw4w9WgXcQ"; // replace with real API result
+
+        res.json({
+            videoId: fakeLiveVideoId,
+            channelId: CHANNEL_ID
+        });
+
+    } catch (err) {
+        res.status(500).json({ error: "Detection failed" });
+    }
+});
+
+/* ---------------- TAKE LIVE ---------------- */
+app.post("/api/take-live", (req, res) => {
+
+    const { videoId } = req.body;
+
+    currentStream = videoId;
+
+    io.emit("stream-update", videoId);
+
+    res.json({ success: true });
+});
+
+/* ---------------- START SERVER ---------------- */
+const PORT = process.env.PORT || 3000;
+
+server.listen(PORT, () => {
+    console.log("Server running on port", PORT);
+});
+
+
+
 
 
 
