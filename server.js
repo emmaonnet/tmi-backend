@@ -1748,10 +1748,57 @@ app.get("/api/health", (req, res) => {
 
 
 
+
+const http = require("http");
+const { Server } = require("socket.io");
+
+
+const server = http.createServer(app);
+
+/* ================= SOCKET.IO ================= */
+const io = new Server(server, {
+    cors: {
+        origin: "*"
+    }
+});
+
+
+
+/* ================= CONFIG ================= */
 const CHANNEL_ID = "UC450v4_ksQH3IeLwNKlm5tQ";
 const API_KEY = "AIzaSyByFnFaXSO_LjTN0dPiPwy8St8ivn5HACg";
 
-/* ---------------- LIVE DETECTION ---------------- */
+/* ================= STATE ================= */
+let currentStream = null;
+
+/* ================= SOCKET CONNECTION ================= */
+io.on("connection", (socket) => {
+
+    console.log("🟢 User connected:", socket.id);
+
+    // Send current stream if already active
+    if (currentStream) {
+        socket.emit("stream-update", currentStream);
+    }
+
+    socket.on("take-live", (videoId) => {
+        currentStream = videoId;
+
+        console.log("🔴 TAKE LIVE:", videoId);
+
+        io.emit("stream-update", videoId);
+    });
+
+    socket.on("stop-live", () => {
+        currentStream = null;
+
+        console.log("⛔ STREAM STOPPED");
+
+        io.emit("stream-stop");
+    });
+});
+
+/* ================= LIVE DETECTION ================= */
 app.get("/api/detect-live", async (req, res) => {
 
     try {
@@ -1764,12 +1811,10 @@ app.get("/api/detect-live", async (req, res) => {
 
         const items = data.items;
 
-        // ❌ No live stream
         if (!items || items.length === 0) {
             return res.json({ videoId: null });
         }
 
-        // ✅ Your real live video
         const videoId = items[0].id.videoId;
 
         return res.json({
@@ -1778,9 +1823,14 @@ app.get("/api/detect-live", async (req, res) => {
         });
 
     } catch (err) {
-        console.error("LIVE DETECTION ERROR:", err);
+        console.error("❌ Live detection error:", err);
         return res.status(500).json({ error: "Detection failed" });
     }
+});
+
+/* ================= ROOT ================= */
+app.get("/", (req, res) => {
+    res.send("🎛 Control Room Backend Running");
 });
 
 
