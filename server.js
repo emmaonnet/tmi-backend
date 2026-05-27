@@ -1748,67 +1748,40 @@ app.get("/api/health", (req, res) => {
 
 
 
-const http = require("http");
-const { Server } = require("socket.io");
-
-
-const server = http.createServer(app);
-
-const io = new Server(server, {
-    cors: { origin: "*" }
-});
-
-
-
-/* 🔥 PUT YOUR CHANNEL ID HERE */
 const CHANNEL_ID = "UC450v4_ksQH3IeLwNKlm5tQ";
+const API_KEY = "AIzaSyBH8V_WJQFse4Ga-Ga9OcXq5NUwip3db_0";
 
-/* CURRENT STREAM STATE */
-let currentStream = null;
-
-/* ---------------- SOCKET ---------------- */
-io.on("connection", (socket) => {
-    console.log("User connected:", socket.id);
-
-    if (currentStream) {
-        socket.emit("stream-update", currentStream);
-    }
-});
-
-/* ---------------- LIVE DETECTION API ---------------- */
-/* THIS is where CHANNEL_ID is actually used */
+/* ---------------- LIVE DETECTION ---------------- */
 app.get("/api/detect-live", async (req, res) => {
 
     try {
 
-        // 🔥 HERE YOU USE CHANNEL_ID TO CALL YOUTUBE API
-        // Example placeholder response:
+        const url =
+        `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${CHANNEL_ID}&eventType=live&type=video&key=${API_KEY}`;
 
-        const fakeLiveVideoId = "dQw4w9WgXcQ"; // replace with real API result
+        const response = await fetch(url);
+        const data = await response.json();
 
-        res.json({
-            videoId: fakeLiveVideoId,
+        const items = data.items;
+
+        // ❌ No live stream
+        if (!items || items.length === 0) {
+            return res.json({ videoId: null });
+        }
+
+        // ✅ Your real live video
+        const videoId = items[0].id.videoId;
+
+        return res.json({
+            videoId,
             channelId: CHANNEL_ID
         });
 
     } catch (err) {
-        res.status(500).json({ error: "Detection failed" });
+        console.error("LIVE DETECTION ERROR:", err);
+        return res.status(500).json({ error: "Detection failed" });
     }
 });
-
-/* ---------------- TAKE LIVE ---------------- */
-app.post("/api/take-live", (req, res) => {
-
-    const { videoId } = req.body;
-
-    currentStream = videoId;
-
-    io.emit("stream-update", videoId);
-
-    res.json({ success: true });
-});
-
-
 
 
 
