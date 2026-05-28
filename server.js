@@ -1750,22 +1750,37 @@ app.get("/api/health", (req, res) => {
 
 
 
+
 const http = require("http");
 const { Server } = require("socket.io");
 
 
 
-/* IMPORTANT */
+
+/* ================= HTTP SERVER ================= */
+
 const server = http.createServer(app);
 
-/* IMPORTANT */
+/* ================= SOCKET.IO ================= */
+
 const io = new Server(server, {
     cors: {
-        origin: "*"
+        origin: "*",
+        methods: ["GET", "POST"]
     }
 });
 
+/* ================= MIDDLEWARE ================= */
 
+
+
+/* ================= CONFIG ================= */
+
+/* 🔥 YOUR YOUTUBE CHANNEL ID */
+const CHANNEL_ID = "UC450v4_ksQH3IeLwNKlm5tQ";
+
+/* 🔥 YOUR YOUTUBE API KEY */
+const API_KEY = "AIzaSyByFnFaXSO_LjTN0dPiPwy8St8ivn5HACg";
 
 /* ================= STREAM STATE ================= */
 
@@ -1778,23 +1793,29 @@ io.on("connection", (socket) => {
     console.log("🟢 User connected:", socket.id);
 
     /* SEND CURRENT STREAM TO NEW USERS */
+
     if(currentStream){
+
+        console.log("📡 Sending existing stream");
 
         socket.emit("stream-update", currentStream);
     }
 
-    /* TAKE LIVE */
+    /* ================= TAKE LIVE ================= */
+
     socket.on("take-live", (videoId) => {
 
         console.log("🔴 TAKE LIVE:", videoId);
 
         currentStream = videoId;
 
-        /* SEND TO EVERYONE */
+        /* SEND STREAM TO ALL RECEIVERS */
+
         io.emit("stream-update", videoId);
     });
 
-    /* STOP LIVE */
+    /* ================= STOP LIVE ================= */
+
     socket.on("stop-live", () => {
 
         console.log("⛔ STOP LIVE");
@@ -1803,53 +1824,78 @@ io.on("connection", (socket) => {
 
         io.emit("stream-stop");
     });
+
+    /* ================= DISCONNECT ================= */
+
+    socket.on("disconnect", () => {
+
+        console.log("⚫ User disconnected:", socket.id);
+    });
 });
 
+/* ================= LIVE DETECTION API ================= */
 
+app.get("/api/detect-live", async (req, res) => {
 
+    try {
 
+        console.log("📡 Checking YouTube live stream...");
 
+        const url =
+        `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${CHANNEL_ID}&eventType=live&type=video&key=${API_KEY}`;
 
+        /* FETCH FROM YOUTUBE */
 
+        const response = await fetch(url);
 
+        const data = await response.json();
 
+        console.log("📡 YouTube API Response:", data);
 
+        /* NO LIVE STREAM */
 
+        if(!data.items || data.items.length === 0){
 
+            return res.json({
+                videoId: null
+            });
+        }
 
+        /* LIVE FOUND */
 
+        const videoId = data.items[0].id.videoId;
 
+        console.log("🟢 LIVE FOUND:", videoId);
 
+        return res.json({
+            videoId
+        });
 
+    } catch(err){
 
+        console.error("❌ DETECT LIVE ERROR:", err);
+
+        return res.status(500).json({
+            error: err.message
+        });
+    }
+});
 
 /* ================= TEST ROUTE ================= */
 
 app.get("/", (req, res) => {
 
-    res.send("🎛 Socket.IO Backend Running");
+    res.send("🎛 Control Room Backend Running");
 });
 
 /* ================= START SERVER ================= */
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 3000;
 
-/* IMPORTANT */
 server.listen(PORT, () => {
 
-    console.log("🚀 Running on port", PORT);
+    console.log(`🚀 Server running on port ${PORT}`);
 });
-
-
-
-
-
-
-
-
-
-
-
 
 
 
