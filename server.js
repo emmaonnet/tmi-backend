@@ -1772,31 +1772,46 @@ const API_KEY = "AIzaSyByFnFaXSO_LjTN0dPiPwy8St8ivn5HACg";
 let currentStream = null;
 
 /* ================= SOCKET CONNECTION ================= */
+
+/* ================= SOCKET.IO ================= */
+
 io.on("connection", (socket) => {
 
     console.log("🟢 User connected:", socket.id);
 
-    // Send current stream if already active
+    // Send active stream to newly connected receiver
     if (currentStream) {
+
+        console.log("📡 Sending existing stream:", currentStream);
+
         socket.emit("stream-update", currentStream);
     }
 
+    /* ================= TAKE LIVE ================= */
+
     socket.on("take-live", (videoId) => {
+
+        console.log("🔴 TAKE LIVE RECEIVED:", videoId);
+
         currentStream = videoId;
 
-        console.log("🔴 TAKE LIVE:", videoId);
-
+        // SEND TO ALL RECEIVERS
         io.emit("stream-update", videoId);
     });
 
-    socket.on("stop-live", () => {
-        currentStream = null;
+    /* ================= STOP LIVE ================= */
 
-        console.log("⛔ STREAM STOPPED");
+    socket.on("stop-live", () => {
+
+        console.log("⛔ STOP LIVE");
+
+        currentStream = null;
 
         io.emit("stream-stop");
     });
+
 });
+
 
 /* ================= LIVE DETECTION ================= */
 app.get("/api/detect-live", async (req, res) => {
