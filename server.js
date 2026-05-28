@@ -1749,11 +1749,11 @@ app.get("/api/health", (req, res) => {
 
 
 
-const express = require("express");
+
 const http = require("http");
 const { Server } = require("socket.io");
 
-const app = express();
+
 
 /* IMPORTANT */
 const server = http.createServer(app);
@@ -1765,7 +1765,7 @@ const io = new Server(server, {
     }
 });
 
-app.use(express.json());
+
 
 /* ================= STREAM STATE ================= */
 
