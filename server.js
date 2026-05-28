@@ -1749,58 +1749,52 @@ app.get("/api/health", (req, res) => {
 
 
 
+const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
 
+const app = express();
 
+/* IMPORTANT */
 const server = http.createServer(app);
 
-/* ================= SOCKET.IO ================= */
+/* IMPORTANT */
 const io = new Server(server, {
     cors: {
         origin: "*"
     }
 });
 
+app.use(express.json());
 
+/* ================= STREAM STATE ================= */
 
-/* ================= CONFIG ================= */
-const CHANNEL_ID = "UC450v4_ksQH3IeLwNKlm5tQ";
-const API_KEY = "AIzaSyByFnFaXSO_LjTN0dPiPwy8St8ivn5HACg";
-
-/* ================= STATE ================= */
 let currentStream = null;
 
 /* ================= SOCKET CONNECTION ================= */
-
-/* ================= SOCKET.IO ================= */
 
 io.on("connection", (socket) => {
 
     console.log("🟢 User connected:", socket.id);
 
-    // Send active stream to newly connected receiver
-    if (currentStream) {
-
-        console.log("📡 Sending existing stream:", currentStream);
+    /* SEND CURRENT STREAM TO NEW USERS */
+    if(currentStream){
 
         socket.emit("stream-update", currentStream);
     }
 
-    /* ================= TAKE LIVE ================= */
-
+    /* TAKE LIVE */
     socket.on("take-live", (videoId) => {
 
-        console.log("🔴 TAKE LIVE RECEIVED:", videoId);
+        console.log("🔴 TAKE LIVE:", videoId);
 
         currentStream = videoId;
 
-        // SEND TO ALL RECEIVERS
+        /* SEND TO EVERYONE */
         io.emit("stream-update", videoId);
     });
 
-    /* ================= STOP LIVE ================= */
-
+    /* STOP LIVE */
     socket.on("stop-live", () => {
 
         console.log("⛔ STOP LIVE");
@@ -1809,43 +1803,41 @@ io.on("connection", (socket) => {
 
         io.emit("stream-stop");
     });
-
 });
 
 
-/* ================= LIVE DETECTION ================= */
-app.get("/api/detect-live", async (req, res) => {
 
-    try {
 
-        const url =
-        `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${CHANNEL_ID}&eventType=live&type=video&key=${API_KEY}`;
 
-        const response = await fetch(url);
-        const data = await response.json();
 
-        const items = data.items;
 
-        if (!items || items.length === 0) {
-            return res.json({ videoId: null });
-        }
 
-        const videoId = items[0].id.videoId;
 
-        return res.json({
-            videoId,
-            channelId: CHANNEL_ID
-        });
 
-    } catch (err) {
-        console.error("❌ Live detection error:", err);
-        return res.status(500).json({ error: "Detection failed" });
-    }
-});
 
-/* ================= ROOT ================= */
+
+
+
+
+
+
+
+
+/* ================= TEST ROUTE ================= */
+
 app.get("/", (req, res) => {
-    res.send("🎛 Control Room Backend Running");
+
+    res.send("🎛 Socket.IO Backend Running");
+});
+
+/* ================= START SERVER ================= */
+
+const PORT = process.env.PORT || 5000;
+
+/* IMPORTANT */
+server.listen(PORT, () => {
+
+    console.log("🚀 Running on port", PORT);
 });
 
 
@@ -1905,22 +1897,6 @@ app.get("/", (req, res) => {
 
 
 
-
-
-
-
-
-
-
-/* =========================
-   TEST ROUTE
-========================= */
-
-app.get("/abc",(req,res)=>{
-
-res.send("ABC WORKING");
-
-});
 
 
 
@@ -1945,28 +1921,5 @@ __dirname,
 });
 
 
-/* =========================
-   START SERVER
-========================= */
-// ======================================================
-// ===================== PORT ===========================
-// ======================================================
 
 
-const PORT =
-process.env.PORT || 5000;
-
-app.listen(PORT, ()=>{
-
-console.log(
-`Server running on ${PORT}`
-);
-
-});
-
-
-
-
-server.listen(PORT, () => {
-    console.log("🚀 Server running on port", PORT);
-});
