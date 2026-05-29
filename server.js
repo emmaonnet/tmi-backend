@@ -1747,13 +1747,21 @@ app.get("/api/health", (req, res) => {
 
 
 
+
+
+
+
 const http = require("http");
 const { Server } = require("socket.io");
 
 
 
 
+/* ================= HTTP SERVER ================= */
+
 const server = http.createServer(app);
+
+/* ================= SOCKET.IO ================= */
 
 const io = new Server(server, {
     cors: {
@@ -1766,21 +1774,29 @@ const io = new Server(server, {
 
 
 
+/* ================= CONFIG ================= */
+
+/* 🔥 YOUR YOUTUBE CHANNEL ID */
+const CHANNEL_ID = "UC450v4_ksQH3IeLwNKlm5tQ";
+
+/* 🔥 YOUR YOUTUBE API KEY */
+const API_KEY = "AIzaSyByFnFaXSO_LjTN0dPiPwy8St8ivn5HACg";
+
 /* ================= STREAM STATE ================= */
 
 let currentStream = null;
 
-/* 🔥 CACHE LIVE VIDEO */
-let latestLiveVideoId = null;
-
-/* ================= SOCKET.IO ================= */
+/* ================= SOCKET CONNECTION ================= */
 
 io.on("connection", (socket) => {
 
     console.log("🟢 User connected:", socket.id);
 
     /* SEND CURRENT STREAM TO NEW USERS */
+
     if(currentStream){
+
+        console.log("📡 Sending existing stream");
 
         socket.emit("stream-update", currentStream);
     }
@@ -1792,6 +1808,8 @@ io.on("connection", (socket) => {
         console.log("🔴 TAKE LIVE:", videoId);
 
         currentStream = videoId;
+
+        /* SEND STREAM TO ALL RECEIVERS */
 
         io.emit("stream-update", videoId);
     });
@@ -1807,84 +1825,93 @@ io.on("connection", (socket) => {
         io.emit("stream-stop");
     });
 
-    /* ================= LOWER THIRD ================= */
+    /* ================= DISCONNECT ================= */
 
-    socket.on("update-lower-third", (data) => {
+    socket.on("disconnect", () => {
 
-        console.log("📝 Lower third updated:", data);
-
-        io.emit("lower-third-update", data);
+        console.log("⚫ User disconnected:", socket.id);
     });
-
 });
 
-/* ================= FAST DETECT ROUTE ================= */
 
-app.get("/api/detect-live", (req, res) => {
 
-    return res.json({
-        videoId: latestLiveVideoId
-    });
 
-});
 
-/* ================= AUTO LIVE CHECKER ================= */
 
-async function checkLiveStream(){
 
-    try{
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* ================= LIVE DETECTION API ================= */
+
+app.get("/api/detect-live", async (req, res) => {
+
+    try {
 
         console.log("📡 Checking YouTube live stream...");
 
-        /* 🔥 YOUR CHANNEL ID */
-        const CHANNEL_ID = "UC450v4_ksQH3IeLwNKlm5tQ";
-
-        /* 🔥 YOUR API KEY */
-        const API_KEY = "AIzaSyByFnFaXSO_LjTN0dPiPwy8St8ivn5HACg";
-
         const url =
         `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${CHANNEL_ID}&eventType=live&type=video&key=${API_KEY}`;
+
+        /* FETCH FROM YOUTUBE */
 
         const response = await fetch(url);
 
         const data = await response.json();
 
-        console.log("📡 YouTube Response:", data);
+        console.log("📡 YouTube API Response:", data);
 
-        /* LIVE FOUND */
-        if(data.items && data.items.length > 0){
+        /* NO LIVE STREAM */
 
-            const videoId = data.items[0].id.videoId;
+        if(!data.items || data.items.length === 0){
 
-            /* NEW LIVE */
-            if(videoId !== latestLiveVideoId){
-
-                console.log("🟢 NEW LIVE DETECTED:", videoId);
-
-                latestLiveVideoId = videoId;
-            }
-
-        } else {
-
-            console.log("⚫ No live stream");
-
-            latestLiveVideoId = null;
+            return res.json({
+                videoId: null
+            });
         }
 
+        /* LIVE FOUND */
+
+        const videoId = data.items[0].id.videoId;
+
+        console.log("🟢 LIVE FOUND:", videoId);
+
+        return res.json({
+            videoId
+        });
+
+    } catch(err){
+
+        console.error("❌ DETECT LIVE ERROR:", err);
+
+        return res.status(500).json({
+            error: err.message
+        });
     }
-    catch(err){
+});
 
-        console.error("❌ Auto detect error:", err);
-    }
-}
 
-/* RUN IMMEDIATELY */
-checkLiveStream();
 
-/* CHECK EVERY 15 SECONDS */
-setInterval(checkLiveStream, 15000);
 
-/* ================= HOME ================= */
+
+
+
+
+
+
+/* ================= TEST ROUTE ================= */
 
 app.get("/", (req, res) => {
 
@@ -1899,6 +1926,49 @@ server.listen(PORT, () => {
 
     console.log(`🚀 Server running on port ${PORT}`);
 });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
