@@ -1754,6 +1754,7 @@ app.get("/api/health", (req, res) => {
 
 
 
+
 const http = require("http");
 const { Server } = require("socket.io");
 
@@ -1779,12 +1780,17 @@ let currentStream = null;
 
 let cachedVideoId = null;
 
-/* ================= SOCKET ================= */
+/* ================= OFFLINE STABILITY CONTROL ================= */
+
+let noLiveCounter = 0; // counts consecutive "no live" results
+
+/* ================= SOCKET.IO ================= */
 
 io.on("connection", (socket) => {
 
     console.log("🟢 User connected:", socket.id);
 
+    // send current stream on reconnect
     if (currentStream) {
         socket.emit("stream-update", currentStream);
     }
@@ -1808,12 +1814,11 @@ io.on("connection", (socket) => {
     });
 
     socket.on("update-lower-third", (data) => {
-
         io.emit("lower-third-update", data);
     });
 });
 
-/* ================= QUOTA-SAFE LIVE DETECTOR ================= */
+/* ================= YOUTUBE LIVE CHECK ================= */
 
 async function checkYouTubeLive(){
 
@@ -1828,48 +1833,67 @@ async function checkYouTubeLive(){
         const response = await fetch(url);
         const data = await response.json();
 
-        console.log("📡 Auto-check YouTube");
+        console.log("📡 Checking YouTube live...");
 
+        // ================= LIVE FOUND =================
         if(data.items && data.items.length > 0){
 
-            cachedVideoId = data.items[0].id.videoId;
+            const videoId = data.items[0].id.videoId;
 
-            console.log("🟢 LIVE FOUND:", cachedVideoId);
+            cachedVideoId = videoId;
 
-        } else {
+            noLiveCounter = 0; // reset counter
+
+            console.log("🟢 LIVE DETECTED:", videoId);
+
+            return;
+        }
+
+        // ================= NO LIVE FOUND =================
+        console.log("⚠️ No live detected (temporary check)");
+
+        noLiveCounter++;
+
+        // only declare offline after 3 consecutive misses
+        if(noLiveCounter >= 3){
 
             cachedVideoId = null;
 
-            console.log("⚫ NO LIVE");
+            console.log("⚫ CONFIRMED OFFLINE");
         }
 
     } catch(err){
 
-        console.error("❌ YouTube error:", err);
+        console.error("❌ YouTube API error:", err);
+
+        // do NOT immediately clear cache
+        noLiveCounter++;
+
+        if(noLiveCounter >= 3){
+            cachedVideoId = null;
+        }
     }
 }
 
-/* ================= AUTO RUNNER (IMPORTANT) ================= */
+/* ================= AUTO LOOP ================= */
 
-/* every 60 seconds ONLY (quota safe) */
-setInterval(checkYouTubeLive, 60000);
-
-/* run once at startup */
-checkYouTubeLive();
+setInterval(checkYouTubeLive, 60000); // every 60 seconds
+checkYouTubeLive(); // run immediately on start
 
 /* ================= FAST API (NO YOUTUBE CALL) ================= */
 
 app.get("/api/detect-live", (req, res) => {
 
     res.json({
-        videoId: cachedVideoId
+        videoId: cachedVideoId,
+        status: cachedVideoId ? "live" : "offline"
     });
 });
 
-/* ================= HEALTH ================= */
+/* ================= HEALTH CHECK ================= */
 
 app.get("/", (req, res) => {
-    res.send("🎛 Quota-safe Broadcast System Running");
+    res.send("🎛 Render-Safe Broadcast System Running");
 });
 
 /* ================= START SERVER ================= */
@@ -1879,8 +1903,6 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
     console.log("🚀 Server running on port", PORT);
 });
-
-
 
 
 
