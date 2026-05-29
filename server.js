@@ -1752,6 +1752,7 @@ app.get("/api/health", (req, res) => {
 
 
 
+
 const http = require("http");
 const { Server } = require("socket.io");
 
@@ -1766,13 +1767,12 @@ const io = new Server(server, {
     }
 });
 
-
+app.use(cors());
+app.use(express.json());
 
 /* ================= STREAM STATE ================= */
 
 let currentStream = null;
-
-/* 🔥 CACHE LAST GOOD LIVE */
 let lastGoodVideoId = null;
 
 /* ================= SOCKET.IO ================= */
@@ -1781,7 +1781,7 @@ io.on("connection", (socket) => {
 
     console.log("🟢 User connected:", socket.id);
 
-    // Send current stream on reconnect
+    // Send current stream if active
     if (currentStream) {
         socket.emit("stream-update", currentStream);
     }
@@ -1816,7 +1816,7 @@ io.on("connection", (socket) => {
 
 });
 
-/* ================= RELIABLE YOUTUBE DETECTION ================= */
+/* ================= YOUTUBE LIVE DETECTION ================= */
 
 app.get("/api/detect-live", async (req, res) => {
 
@@ -1828,33 +1828,31 @@ app.get("/api/detect-live", async (req, res) => {
 
     try {
 
-        let data = null;
+        const response = await fetch(url);
+        const data = await response.json();
 
-        // 🔁 RETRY 3 TIMES FOR STABILITY
-        for (let i = 0; i < 3; i++) {
+        console.log("📡 YouTube response:", JSON.stringify(data));
 
-            const response = await fetch(url);
-            data = await response.json();
-
-            if (data.items && data.items.length > 0) {
-                break;
-            }
-
-            // wait 1 second before retry
-            await new Promise(resolve => setTimeout(resolve, 1000));
-        }
-
-        // ❌ NO LIVE FOUND
-        if (!data.items || data.items.length === 0) {
+        // ❌ NO DATA OR INVALID STRUCTURE
+        if (!data || !data.items || data.items.length === 0) {
 
             return res.json({
                 videoId: lastGoodVideoId || null
             });
         }
 
-        // ✅ LIVE FOUND
-        const videoId = data.items[0].id.videoId;
+        const item = data.items[0];
 
+        if (!item || !item.id || !item.id.videoId) {
+
+            return res.json({
+                videoId: lastGoodVideoId || null
+            });
+        }
+
+        const videoId = item.id.videoId;
+
+        // cache last valid live
         if (videoId) {
             lastGoodVideoId = videoId;
         }
@@ -1874,7 +1872,7 @@ app.get("/api/detect-live", async (req, res) => {
     }
 });
 
-/* ================= HOME ================= */
+/* ================= HEALTH CHECK ================= */
 
 app.get("/", (req, res) => {
     res.send("🎛 Broadcast System Running");
@@ -1887,24 +1885,6 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
     console.log("🚀 Server running on port", PORT);
 });
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
