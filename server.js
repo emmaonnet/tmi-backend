@@ -1746,22 +1746,12 @@ app.get("/api/health", (req, res) => {
 
 
 
-
-
-
-
-
 const http = require("http");
 const { Server } = require("socket.io");
 
 
 
-
-/* ================= HTTP SERVER ================= */
-
 const server = http.createServer(app);
-
-/* ================= SOCKET.IO ================= */
 
 const io = new Server(server, {
     cors: {
@@ -1770,52 +1760,34 @@ const io = new Server(server, {
     }
 });
 
-/* ================= MIDDLEWARE ================= */
 
-
-
-/* ================= CONFIG ================= */
-
-/* 🔥 YOUR YOUTUBE CHANNEL ID */
-const CHANNEL_ID = "UC450v4_ksQH3IeLwNKlm5tQ";
-
-/* 🔥 YOUR YOUTUBE API KEY */
-const API_KEY = "AIzaSyByFnFaXSO_LjTN0dPiPwy8St8ivn5HACg";
 
 /* ================= STREAM STATE ================= */
 
 let currentStream = null;
 
-/* ================= SOCKET CONNECTION ================= */
+/* ================= SOCKET ================= */
 
 io.on("connection", (socket) => {
 
     console.log("🟢 User connected:", socket.id);
 
-    /* SEND CURRENT STREAM TO NEW USERS */
-
-    if(currentStream){
-
-        console.log("📡 Sending existing stream");
-
+    /* Send existing stream to new users */
+    if (currentStream) {
         socket.emit("stream-update", currentStream);
     }
 
     /* ================= TAKE LIVE ================= */
-
     socket.on("take-live", (videoId) => {
 
         console.log("🔴 TAKE LIVE:", videoId);
 
         currentStream = videoId;
 
-        /* SEND STREAM TO ALL RECEIVERS */
-
         io.emit("stream-update", videoId);
     });
 
     /* ================= STOP LIVE ================= */
-
     socket.on("stop-live", () => {
 
         console.log("⛔ STOP LIVE");
@@ -1825,76 +1797,42 @@ io.on("connection", (socket) => {
         io.emit("stream-stop");
     });
 
-    /* ================= DISCONNECT ================= */
+    /* ================= LOWER THIRD (NEW FEATURE) ================= */
+    socket.on("update-lower-third", (data) => {
 
-    socket.on("disconnect", () => {
+        console.log("📝 Lower third update:", data);
 
-        console.log("⚫ User disconnected:", socket.id);
+        io.emit("lower-third-update", data);
     });
+
 });
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/* ================= LIVE DETECTION API ================= */
+/* ================= LIVE DETECTION ================= */
 
 app.get("/api/detect-live", async (req, res) => {
 
     try {
 
-        console.log("📡 Checking YouTube live stream...");
+        const CHANNEL_ID = "UC450v4_ksQH3IeLwNKlm5tQ";
+        const API_KEY = "AIzaSyByFnFaXSO_LjTN0dPiPwy8St8ivn5HACg";
 
         const url =
         `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${CHANNEL_ID}&eventType=live&type=video&key=${API_KEY}`;
 
-        /* FETCH FROM YOUTUBE */
-
         const response = await fetch(url);
-
         const data = await response.json();
 
-        console.log("📡 YouTube API Response:", data);
-
-        /* NO LIVE STREAM */
-
-        if(!data.items || data.items.length === 0){
-
-            return res.json({
-                videoId: null
-            });
+        if (!data.items || data.items.length === 0) {
+            return res.json({ videoId: null });
         }
-
-        /* LIVE FOUND */
 
         const videoId = data.items[0].id.videoId;
 
-        console.log("🟢 LIVE FOUND:", videoId);
+        return res.json({ videoId });
 
-        return res.json({
-            videoId
-        });
+    } catch (err) {
 
-    } catch(err){
-
-        console.error("❌ DETECT LIVE ERROR:", err);
+        console.error("❌ Detect live error:", err);
 
         return res.status(500).json({
             error: err.message
@@ -1902,19 +1840,9 @@ app.get("/api/detect-live", async (req, res) => {
     }
 });
 
-
-
-
-
-
-
-
-
-
-/* ================= TEST ROUTE ================= */
+/* ================= HOME ================= */
 
 app.get("/", (req, res) => {
-
     res.send("🎛 Control Room Backend Running");
 });
 
@@ -1923,14 +1851,8 @@ app.get("/", (req, res) => {
 const PORT = process.env.PORT || 3000;
 
 server.listen(PORT, () => {
-
-    console.log(`🚀 Server running on port ${PORT}`);
+    console.log("🚀 Server running on port", PORT);
 });
-
-
-
-
-
 
 
 
