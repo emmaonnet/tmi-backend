@@ -1919,6 +1919,21 @@ socket.on("stream-stop", () => {
 
 
 
+socket.on("update-lower-third", (data) => {
+
+    io.emit("lower-third-update", data);
+
+});
+
+
+socket.on("lower-third-update", (data) => {
+
+    ltTitle.innerText = data.title || "LIVE";
+    ltSubtitle.innerText = data.subtitle || "";
+
+    lowerThird.classList.add("show");
+
+});
 
 
 
