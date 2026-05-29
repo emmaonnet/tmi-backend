@@ -1746,8 +1746,10 @@ app.get("/api/health", (req, res) => {
 
 
 
+
 const http = require("http");
 const { Server } = require("socket.io");
+
 
 
 
@@ -1760,24 +1762,31 @@ const io = new Server(server, {
     }
 });
 
+/* ================= MIDDLEWARE ================= */
+
 
 
 /* ================= STREAM STATE ================= */
 
 let currentStream = null;
 
-/* ================= SOCKET ================= */
+/* 🔥 CACHE LIVE VIDEO */
+let latestLiveVideoId = null;
+
+/* ================= SOCKET.IO ================= */
 
 io.on("connection", (socket) => {
 
     console.log("🟢 User connected:", socket.id);
 
-    /* Send existing stream to new users */
-    if (currentStream) {
+    /* SEND CURRENT STREAM TO NEW USERS */
+    if(currentStream){
+
         socket.emit("stream-update", currentStream);
     }
 
     /* ================= TAKE LIVE ================= */
+
     socket.on("take-live", (videoId) => {
 
         console.log("🔴 TAKE LIVE:", videoId);
@@ -1788,6 +1797,7 @@ io.on("connection", (socket) => {
     });
 
     /* ================= STOP LIVE ================= */
+
     socket.on("stop-live", () => {
 
         console.log("⛔ STOP LIVE");
@@ -1797,52 +1807,87 @@ io.on("connection", (socket) => {
         io.emit("stream-stop");
     });
 
-    /* ================= LOWER THIRD (NEW FEATURE) ================= */
+    /* ================= LOWER THIRD ================= */
+
     socket.on("update-lower-third", (data) => {
 
-        console.log("📝 Lower third update:", data);
+        console.log("📝 Lower third updated:", data);
 
         io.emit("lower-third-update", data);
     });
 
 });
 
-/* ================= LIVE DETECTION ================= */
+/* ================= FAST DETECT ROUTE ================= */
 
-app.get("/api/detect-live", async (req, res) => {
+app.get("/api/detect-live", (req, res) => {
 
-    try {
+    return res.json({
+        videoId: latestLiveVideoId
+    });
 
+});
+
+/* ================= AUTO LIVE CHECKER ================= */
+
+async function checkLiveStream(){
+
+    try{
+
+        console.log("📡 Checking YouTube live stream...");
+
+        /* 🔥 YOUR CHANNEL ID */
         const CHANNEL_ID = "UC450v4_ksQH3IeLwNKlm5tQ";
+
+        /* 🔥 YOUR API KEY */
         const API_KEY = "AIzaSyByFnFaXSO_LjTN0dPiPwy8St8ivn5HACg";
 
         const url =
         `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${CHANNEL_ID}&eventType=live&type=video&key=${API_KEY}`;
 
         const response = await fetch(url);
+
         const data = await response.json();
 
-        if (!data.items || data.items.length === 0) {
-            return res.json({ videoId: null });
+        console.log("📡 YouTube Response:", data);
+
+        /* LIVE FOUND */
+        if(data.items && data.items.length > 0){
+
+            const videoId = data.items[0].id.videoId;
+
+            /* NEW LIVE */
+            if(videoId !== latestLiveVideoId){
+
+                console.log("🟢 NEW LIVE DETECTED:", videoId);
+
+                latestLiveVideoId = videoId;
+            }
+
+        } else {
+
+            console.log("⚫ No live stream");
+
+            latestLiveVideoId = null;
         }
 
-        const videoId = data.items[0].id.videoId;
-
-        return res.json({ videoId });
-
-    } catch (err) {
-
-        console.error("❌ Detect live error:", err);
-
-        return res.status(500).json({
-            error: err.message
-        });
     }
-});
+    catch(err){
+
+        console.error("❌ Auto detect error:", err);
+    }
+}
+
+/* RUN IMMEDIATELY */
+checkLiveStream();
+
+/* CHECK EVERY 15 SECONDS */
+setInterval(checkLiveStream, 15000);
 
 /* ================= HOME ================= */
 
 app.get("/", (req, res) => {
+
     res.send("🎛 Control Room Backend Running");
 });
 
@@ -1851,46 +1896,9 @@ app.get("/", (req, res) => {
 const PORT = process.env.PORT || 3000;
 
 server.listen(PORT, () => {
-    console.log("🚀 Server running on port", PORT);
+
+    console.log(`🚀 Server running on port ${PORT}`);
 });
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
