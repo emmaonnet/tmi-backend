@@ -1833,6 +1833,78 @@ io.on("connection", (socket) => {
     });
 });
 
+
+
+
+socket.on("stream-update", (videoId) => {
+
+    frame.src =
+    `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&playsinline=1`;
+
+    placeholder.style.display = "none";
+    frame.style.display = "block";
+
+    // 🎬 SHOW LOWER THIRD
+    ltTitle.innerText = "🔴 LIVE";
+    ltSubtitle.innerText = "Broadcast in progress";
+
+    lowerThird.classList.add("show");
+
+});
+
+
+
+
+socket.on("stream-stop", () => {
+
+    frame.src = "";
+    frame.style.display = "none";
+    placeholder.style.display = "flex";
+
+    lowerThird.classList.remove("show");
+
+});
+
+
+
+
+socket.on("update-lower-third", (data) => {
+
+    io.emit("lower-third-update", data);
+
+});
+
+
+socket.on("lower-third-update", (data) => {
+
+    ltTitle.innerText = data.title || "LIVE";
+    ltSubtitle.innerText = data.subtitle || "";
+
+    lowerThird.classList.add("show");
+
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 /* ================= LIVE DETECTION API ================= */
 
 app.get("/api/detect-live", async (req, res) => {
@@ -1884,56 +1956,6 @@ app.get("/api/detect-live", async (req, res) => {
 
 
 
-
-
-
-socket.on("stream-update", (videoId) => {
-
-    frame.src =
-    `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&playsinline=1`;
-
-    placeholder.style.display = "none";
-    frame.style.display = "block";
-
-    // 🎬 SHOW LOWER THIRD
-    ltTitle.innerText = "🔴 LIVE";
-    ltSubtitle.innerText = "Broadcast in progress";
-
-    lowerThird.classList.add("show");
-
-});
-
-
-
-
-socket.on("stream-stop", () => {
-
-    frame.src = "";
-    frame.style.display = "none";
-    placeholder.style.display = "flex";
-
-    lowerThird.classList.remove("show");
-
-});
-
-
-
-
-socket.on("update-lower-third", (data) => {
-
-    io.emit("lower-third-update", data);
-
-});
-
-
-socket.on("lower-third-update", (data) => {
-
-    ltTitle.innerText = data.title || "LIVE";
-    ltSubtitle.innerText = data.subtitle || "";
-
-    lowerThird.classList.add("show");
-
-});
 
 
 
