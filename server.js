@@ -1753,11 +1753,12 @@ app.get("/api/health", (req, res) => {
 
 
 
+const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
+const cors = require("cors");
 
-
-
+const app = express();
 const server = http.createServer(app);
 
 const io = new Server(server, {
@@ -1773,20 +1774,21 @@ app.use(express.json());
 /* ================= STREAM STATE ================= */
 
 let currentStream = null;
-let lastGoodVideoId = null;
 
-/* ================= SOCKET.IO ================= */
+/* ================= YOUTUBE CACHE ================= */
+
+let cachedVideoId = null;
+
+/* ================= SOCKET ================= */
 
 io.on("connection", (socket) => {
 
     console.log("🟢 User connected:", socket.id);
 
-    // Send current stream if active
     if (currentStream) {
         socket.emit("stream-update", currentStream);
     }
 
-    /* TAKE LIVE */
     socket.on("take-live", (videoId) => {
 
         console.log("🔴 TAKE LIVE:", videoId);
@@ -1796,7 +1798,6 @@ io.on("connection", (socket) => {
         io.emit("stream-update", videoId);
     });
 
-    /* STOP LIVE */
     socket.on("stop-live", () => {
 
         console.log("⛔ STOP LIVE");
@@ -1806,76 +1807,69 @@ io.on("connection", (socket) => {
         io.emit("stream-stop");
     });
 
-    /* LOWER THIRD */
     socket.on("update-lower-third", (data) => {
-
-        console.log("📝 Lower third:", data);
 
         io.emit("lower-third-update", data);
     });
-
 });
 
-/* ================= YOUTUBE LIVE DETECTION ================= */
+/* ================= QUOTA-SAFE LIVE DETECTOR ================= */
 
-app.get("/api/detect-live", async (req, res) => {
+async function checkYouTubeLive(){
 
-    const CHANNEL_ID = "UC450v4_ksQH3IeLwNKlm5tQ";
-    const API_KEY = "AIzaSyByFnFaXSO_LjTN0dPiPwy8St8ivn5HACg";
+    try{
 
-    const url =
-    `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${CHANNEL_ID}&eventType=live&type=video&key=${API_KEY}`;
+        const CHANNEL_ID = "UC450v4_ksQH3IeLwNKlm5tQ";
+        const API_KEY = "AIzaSyByFnFaXSO_LjTN0dPiPwy8St8ivn5HACg";
 
-    try {
+        const url =
+        `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${CHANNEL_ID}&eventType=live&type=video&key=${API_KEY}`;
 
         const response = await fetch(url);
         const data = await response.json();
 
-        console.log("📡 YouTube response:", JSON.stringify(data));
+        console.log("📡 Auto-check YouTube");
 
-        // ❌ NO DATA OR INVALID STRUCTURE
-        if (!data || !data.items || data.items.length === 0) {
+        if(data.items && data.items.length > 0){
 
-            return res.json({
-                videoId: lastGoodVideoId || null
-            });
+            cachedVideoId = data.items[0].id.videoId;
+
+            console.log("🟢 LIVE FOUND:", cachedVideoId);
+
+        } else {
+
+            cachedVideoId = null;
+
+            console.log("⚫ NO LIVE");
         }
 
-        const item = data.items[0];
+    } catch(err){
 
-        if (!item || !item.id || !item.id.videoId) {
-
-            return res.json({
-                videoId: lastGoodVideoId || null
-            });
-        }
-
-        const videoId = item.id.videoId;
-
-        // cache last valid live
-        if (videoId) {
-            lastGoodVideoId = videoId;
-        }
-
-        return res.json({
-            videoId: videoId || lastGoodVideoId || null
-        });
-
-    } catch (err) {
-
-        console.error("❌ Detect-live error:", err);
-
-        return res.json({
-            videoId: lastGoodVideoId || null,
-            error: "Detection failed"
-        });
+        console.error("❌ YouTube error:", err);
     }
+}
+
+/* ================= AUTO RUNNER (IMPORTANT) ================= */
+
+/* every 60 seconds ONLY (quota safe) */
+setInterval(checkYouTubeLive, 60000);
+
+/* run once at startup */
+checkYouTubeLive();
+
+/* ================= FAST API (NO YOUTUBE CALL) ================= */
+
+app.get("/api/detect-live", (req, res) => {
+
+    res.json({
+        videoId: cachedVideoId
+    });
 });
 
-/* ================= HEALTH CHECK ================= */
+/* ================= HEALTH ================= */
 
 app.get("/", (req, res) => {
-    res.send("🎛 Broadcast System Running");
+    res.send("🎛 Quota-safe Broadcast System Running");
 });
 
 /* ================= START SERVER ================= */
@@ -1885,25 +1879,6 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
     console.log("🚀 Server running on port", PORT);
 });
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
