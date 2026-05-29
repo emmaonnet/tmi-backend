@@ -1751,17 +1751,13 @@ app.get("/api/health", (req, res) => {
 
 
 
+
 const http = require("http");
 const { Server } = require("socket.io");
 
 
 
-
-/* ================= HTTP SERVER ================= */
-
 const server = http.createServer(app);
-
-/* ================= SOCKET.IO ================= */
 
 const io = new Server(server, {
     cors: {
@@ -1770,52 +1766,37 @@ const io = new Server(server, {
     }
 });
 
-/* ================= MIDDLEWARE ================= */
 
-
-
-/* ================= CONFIG ================= */
-
-/* 🔥 YOUR YOUTUBE CHANNEL ID */
-const CHANNEL_ID = "UC450v4_ksQH3IeLwNKlm5tQ";
-
-/* 🔥 YOUR YOUTUBE API KEY */
-const API_KEY = "AIzaSyByFnFaXSO_LjTN0dPiPwy8St8ivn5HACg";
 
 /* ================= STREAM STATE ================= */
 
 let currentStream = null;
 
-/* ================= SOCKET CONNECTION ================= */
+/* 🔥 CACHE LAST GOOD LIVE */
+let lastGoodVideoId = null;
+
+/* ================= SOCKET.IO ================= */
 
 io.on("connection", (socket) => {
 
     console.log("🟢 User connected:", socket.id);
 
-    /* SEND CURRENT STREAM TO NEW USERS */
-
-    if(currentStream){
-
-        console.log("📡 Sending existing stream");
-
+    // Send current stream on reconnect
+    if (currentStream) {
         socket.emit("stream-update", currentStream);
     }
 
-    /* ================= TAKE LIVE ================= */
-
+    /* TAKE LIVE */
     socket.on("take-live", (videoId) => {
 
         console.log("🔴 TAKE LIVE:", videoId);
 
         currentStream = videoId;
 
-        /* SEND STREAM TO ALL RECEIVERS */
-
         io.emit("stream-update", videoId);
     });
 
-    /* ================= STOP LIVE ================= */
-
+    /* STOP LIVE */
     socket.on("stop-live", () => {
 
         console.log("⛔ STOP LIVE");
@@ -1825,97 +1806,78 @@ io.on("connection", (socket) => {
         io.emit("stream-stop");
     });
 
-    /* ================= DISCONNECT ================= */
+    /* LOWER THIRD */
+    socket.on("update-lower-third", (data) => {
 
-    socket.on("disconnect", () => {
+        console.log("📝 Lower third:", data);
 
-        console.log("⚫ User disconnected:", socket.id);
+        io.emit("lower-third-update", data);
     });
+
 });
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/* ================= LIVE DETECTION API ================= */
+/* ================= RELIABLE YOUTUBE DETECTION ================= */
 
 app.get("/api/detect-live", async (req, res) => {
 
+    const CHANNEL_ID = "UC450v4_ksQH3IeLwNKlm5tQ";
+    const API_KEY = "AIzaSyByFnFaXSO_LjTN0dPiPwy8St8ivn5HACg";
+
+    const url =
+    `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${CHANNEL_ID}&eventType=live&type=video&key=${API_KEY}`;
+
     try {
 
-        console.log("📡 Checking YouTube live stream...");
+        let data = null;
 
-        const url =
-        `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${CHANNEL_ID}&eventType=live&type=video&key=${API_KEY}`;
+        // 🔁 RETRY 3 TIMES FOR STABILITY
+        for (let i = 0; i < 3; i++) {
 
-        /* FETCH FROM YOUTUBE */
+            const response = await fetch(url);
+            data = await response.json();
 
-        const response = await fetch(url);
+            if (data.items && data.items.length > 0) {
+                break;
+            }
 
-        const data = await response.json();
+            // wait 1 second before retry
+            await new Promise(resolve => setTimeout(resolve, 1000));
+        }
 
-        console.log("📡 YouTube API Response:", data);
-
-        /* NO LIVE STREAM */
-
-        if(!data.items || data.items.length === 0){
+        // ❌ NO LIVE FOUND
+        if (!data.items || data.items.length === 0) {
 
             return res.json({
-                videoId: null
+                videoId: lastGoodVideoId || null
             });
         }
 
-        /* LIVE FOUND */
-
+        // ✅ LIVE FOUND
         const videoId = data.items[0].id.videoId;
 
-        console.log("🟢 LIVE FOUND:", videoId);
+        if (videoId) {
+            lastGoodVideoId = videoId;
+        }
 
         return res.json({
-            videoId
+            videoId: videoId || lastGoodVideoId || null
         });
 
-    } catch(err){
+    } catch (err) {
 
-        console.error("❌ DETECT LIVE ERROR:", err);
+        console.error("❌ Detect-live error:", err);
 
-        return res.status(500).json({
-            error: err.message
+        return res.json({
+            videoId: lastGoodVideoId || null,
+            error: "Detection failed"
         });
     }
 });
 
-
-
-
-
-
-
-
-
-
-/* ================= TEST ROUTE ================= */
+/* ================= HOME ================= */
 
 app.get("/", (req, res) => {
-
-    res.send("🎛 Control Room Backend Running");
+    res.send("🎛 Broadcast System Running");
 });
 
 /* ================= START SERVER ================= */
@@ -1923,14 +1885,8 @@ app.get("/", (req, res) => {
 const PORT = process.env.PORT || 3000;
 
 server.listen(PORT, () => {
-
-    console.log(`🚀 Server running on port ${PORT}`);
+    console.log("🚀 Server running on port", PORT);
 });
-
-
-
-
-
 
 
 
