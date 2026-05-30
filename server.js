@@ -1755,6 +1755,7 @@ app.get("/api/health", (req, res) => {
 
 
 
+
 const http = require("http");
 const { Server } = require("socket.io");
 
@@ -1774,137 +1775,106 @@ app.use(express.json());
 
 /* ================= STREAM STATE ================= */
 
-let currentStream = null;
+let streamSources = {
+    youtube: null,
+    facebook: null,
+    twitch: null,
+    manual: null
+};
 
-/* ================= YOUTUBE CACHE ================= */
+let activeSource = null;
 
-let cachedVideoId = null;
+/* ================= ACTIVE STREAM PICKER ================= */
 
-/* ================= OFFLINE STABILITY CONTROL ================= */
+function getActiveStream(){
 
-let noLiveCounter = 0; // counts consecutive "no live" results
+    if(streamSources.youtube){
+        activeSource = "youtube";
+        return streamSources.youtube;
+    }
 
-/* ================= SOCKET.IO ================= */
+    if(streamSources.facebook){
+        activeSource = "facebook";
+        return streamSources.facebook;
+    }
+
+    if(streamSources.twitch){
+        activeSource = "twitch";
+        return streamSources.twitch;
+    }
+
+    if(streamSources.manual){
+        activeSource = "manual";
+        return streamSources.manual;
+    }
+
+    activeSource = null;
+    return null;
+}
+
+/* ================= SOCKET ================= */
 
 io.on("connection", (socket) => {
 
-    console.log("🟢 User connected:", socket.id);
+    console.log("🟢 Connected:", socket.id);
 
-    // send current stream on reconnect
-    if (currentStream) {
-        socket.emit("stream-update", currentStream);
-    }
-
-    socket.on("take-live", (videoId) => {
-
-        console.log("🔴 TAKE LIVE:", videoId);
-
-        currentStream = videoId;
-
-        io.emit("stream-update", videoId);
+    socket.emit("stream-update", {
+        videoId: getActiveStream(),
+        source: activeSource
     });
 
-    socket.on("stop-live", () => {
+    socket.on("set-stream-source", (data) => {
 
-        console.log("⛔ STOP LIVE");
+        // data: { type, videoId }
+        streamSources[data.type] = data.videoId;
 
-        currentStream = null;
+        console.log("🎛 Source updated:", data);
 
-        io.emit("stream-stop");
+        io.emit("stream-update", {
+            videoId: getActiveStream(),
+            source: activeSource
+        });
     });
 
     socket.on("update-lower-third", (data) => {
+
         io.emit("lower-third-update", data);
+    });
+
+    socket.on("stop-all", () => {
+
+        streamSources = {
+            youtube: null,
+            facebook: null,
+            twitch: null,
+            manual: null
+        };
+
+        io.emit("stream-update", {
+            videoId: null,
+            source: null
+        });
     });
 });
 
-/* ================= YOUTUBE LIVE CHECK ================= */
-
-async function checkYouTubeLive(){
-
-    try{
-
-        const CHANNEL_ID = "UC450v4_ksQH3IeLwNKlm5tQ";
-        const API_KEY = "AIzaSyByFnFaXSO_LjTN0dPiPwy8St8ivn5HACg";
-
-        const url =
-        `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${CHANNEL_ID}&eventType=live&type=video&key=${API_KEY}`;
-
-        const response = await fetch(url);
-        const data = await response.json();
-
-        console.log("📡 Checking YouTube live...");
-
-        // ================= LIVE FOUND =================
-        if(data.items && data.items.length > 0){
-
-            const videoId = data.items[0].id.videoId;
-
-            cachedVideoId = videoId;
-
-            noLiveCounter = 0; // reset counter
-
-            console.log("🟢 LIVE DETECTED:", videoId);
-
-            return;
-        }
-
-        // ================= NO LIVE FOUND =================
-        console.log("⚠️ No live detected (temporary check)");
-
-        noLiveCounter++;
-
-        // only declare offline after 3 consecutive misses
-        if(noLiveCounter >= 3){
-
-            cachedVideoId = null;
-
-            console.log("⚫ CONFIRMED OFFLINE");
-        }
-
-    } catch(err){
-
-        console.error("❌ YouTube API error:", err);
-
-        // do NOT immediately clear cache
-        noLiveCounter++;
-
-        if(noLiveCounter >= 3){
-            cachedVideoId = null;
-        }
-    }
-}
-
-/* ================= AUTO LOOP ================= */
-
-setInterval(checkYouTubeLive, 60000); // every 60 seconds
-checkYouTubeLive(); // run immediately on start
-
-/* ================= FAST API (NO YOUTUBE CALL) ================= */
+/* ================= API ================= */
 
 app.get("/api/detect-live", (req, res) => {
 
     res.json({
-        videoId: cachedVideoId,
-        status: cachedVideoId ? "live" : "offline"
+        videoId: getActiveStream(),
+        source: activeSource,
+        status: activeSource ? "live" : "standby"
     });
 });
 
-/* ================= HEALTH CHECK ================= */
-
-app.get("/", (req, res) => {
-    res.send("🎛 Render-Safe Broadcast System Running");
-});
-
-/* ================= START SERVER ================= */
+/* ================= SERVER ================= */
 
 const PORT = process.env.PORT || 3000;
 
 server.listen(PORT, () => {
     console.log("🚀 Server running on port", PORT);
 });
-
-
 
 
 
