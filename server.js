@@ -1,30 +1,25 @@
 require("dotenv").config();
 
-const fs = require("fs");
-const path = require("path");
-const http = require("http");
-
 const express = require("express");
+const http = require("http");
 const cors = require("cors");
 const mongoose = require("mongoose");
 const multer = require("multer");
 const cloudinary = require("cloudinary").v2;
-
+const fs = require("fs");
+const path = require("path");
 const { Server } = require("socket.io");
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, {
-  cors: { origin: "*" }
-});
+const io = new Server(server, { cors: { origin: "*" } });
 
 // ======================================================
 // ===================== MIDDLEWARE =====================
 // ======================================================
 app.use(cors());
 app.use(express.json({ limit: "50mb" }));
-app.use(express.urlencoded({ extended: true, limit: "50mb" }));
-
+app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, "public")));
 
 // ======================================================
@@ -49,7 +44,7 @@ cloudinary.config({
 const upload = multer({ dest: "uploads/" });
 
 // ======================================================
-// ===================== SIMPLE FILE DB =================
+// ===================== FILE DB ========================
 // ======================================================
 const DB_FILE = "./db.json";
 
@@ -62,7 +57,138 @@ function writeDB(data) {
 }
 
 // ======================================================
-// ===================== MODELS =========================
+// ===================== BROADCAST ENGINE ==============
+// ======================================================
+
+let broadcastState = {
+  program: null,
+  preview: null,
+  mode: "manual",
+  channel: "main",
+  emergency: false,
+  lowerThird: "",
+  schedule: [],
+  lastUpdate: Date.now()
+};
+
+// ======================================================
+// ===================== SOCKET ENGINE ==================
+// ======================================================
+io.on("connection", (socket) => {
+
+  console.log("Client connected:", socket.id);
+
+  socket.emit("program-update", broadcastState);
+
+  // TAKE LIVE
+  socket.on("take-live", (videoId) => {
+
+    broadcastState.program = videoId;
+    broadcastState.lastUpdate = Date.now();
+
+    io.emit("program-update", broadcastState);
+  });
+
+  // PREVIEW
+  socket.on("preview-update", (videoId) => {
+
+    broadcastState.preview = videoId;
+
+    io.emit("preview-update", videoId);
+  });
+
+  // STOP LIVE
+  socket.on("stop-live", () => {
+
+    broadcastState.program = null;
+
+    io.emit("program-stop");
+  });
+
+  // LOWER THIRD
+  socket.on("lower-third", (text) => {
+
+    broadcastState.lowerThird = text;
+
+    io.emit("lower-third", text);
+  });
+
+  // EMERGENCY MODE
+  socket.on("emergency", (msg) => {
+
+    broadcastState.emergency = true;
+    broadcastState.program = null;
+
+    io.emit("emergency", msg);
+  });
+
+  socket.on("disconnect", () => {
+    console.log("Client disconnected:", socket.id);
+  });
+});
+
+// ======================================================
+// ===================== LIVE API =======================
+// ======================================================
+app.get("/api/live", (req, res) => {
+  res.json(broadcastState);
+});
+
+app.post("/api/live", (req, res) => {
+
+  broadcastState = {
+    ...broadcastState,
+    ...req.body,
+    lastUpdate: Date.now()
+  };
+
+  io.emit("program-update", broadcastState);
+
+  res.json({
+    success: true,
+    broadcastState
+  });
+});
+
+// ======================================================
+// ===================== DETECT LIVE ====================
+// ======================================================
+const CHANNEL_ID = process.env.YT_CHANNEL_ID;
+const API_KEY = process.env.YT_API_KEY;
+
+async function detectLive() {
+
+  try {
+
+    const url =
+      `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${CHANNEL_ID}&eventType=live&type=video&key=${API_KEY}`;
+
+    const res = await fetch(url);
+    const data = await res.json();
+
+    if (!data.items || data.items.length === 0) return null;
+
+    return data.items[0].id.videoId;
+
+  } catch (err) {
+    console.log("Detect error:", err);
+    return null;
+  }
+}
+
+app.get("/api/detect-live", async (req, res) => {
+
+  const videoId = await detectLive();
+
+  broadcastState.preview = videoId;
+
+  io.emit("preview-update", videoId);
+
+  res.json({ videoId });
+});
+
+// ======================================================
+// ===================== SERMONS ========================
 // ======================================================
 const sermonSchema = new mongoose.Schema({
   title: String,
@@ -75,68 +201,28 @@ const sermonSchema = new mongoose.Schema({
 
 const Sermon = mongoose.model("Sermon", sermonSchema);
 
-const mediaSchema = new mongoose.Schema({
-  title: String,
-  description: String,
-  type: { type: String, enum: ["image", "video"] },
-  url: String
-}, { timestamps: true });
-
-const Media = mongoose.model("Media", mediaSchema);
-
-const blogSchema = new mongoose.Schema({
-  title: String,
-  description: String,
-  content: String,
-  image: String
-}, { timestamps: true });
-
-const Blog = mongoose.model("Blog", blogSchema);
-
-const announcementSchema = new mongoose.Schema({
-  title: String,
-  message: String,
-  date: { type: Date, default: Date.now }
-});
-
-const Announcement = mongoose.model("Announcement", announcementSchema);
-
-// ======================================================
-// ===================== HOME STATE =====================
-// ======================================================
-app.get("/api/home", (req, res) => {
-  res.json(readDB());
-});
-
-// ======================================================
-// ===================== SERMONS ========================
-// ======================================================
 app.post("/api/sermons", upload.single("thumbnail"), async (req, res) => {
-  try {
-    const result = await cloudinary.uploader.upload(req.file.path, {
-      folder: "sermons"
-    });
 
-    const sermon = new Sermon({
-      title: req.body.title,
-      description: req.body.description,
-      category: req.body.category,
-      duration: req.body.duration,
-      videoUrl: req.body.videoUrl,
-      thumbnail: result.secure_url
-    });
+  const result = await cloudinary.uploader.upload(req.file.path, {
+    folder: "sermons"
+  });
 
-    await sermon.save();
+  const sermon = new Sermon({
+    title: req.body.title,
+    description: req.body.description,
+    category: req.body.category,
+    duration: req.body.duration,
+    videoUrl: req.body.videoUrl,
+    thumbnail: result.secure_url
+  });
 
-    res.json({ success: true, sermon });
-  } catch (err) {
-    res.status(500).json({ error: "Upload failed" });
-  }
+  await sermon.save();
+
+  res.json({ success: true, sermon });
 });
 
 app.get("/api/sermons", async (req, res) => {
-  const data = await Sermon.find().sort({ createdAt: -1 });
-  res.json(data);
+  res.json(await Sermon.find().sort({ createdAt: -1 }));
 });
 
 app.delete("/api/sermons/:id", async (req, res) => {
@@ -147,26 +233,32 @@ app.delete("/api/sermons/:id", async (req, res) => {
 // ======================================================
 // ===================== MEDIA ==========================
 // ======================================================
+const mediaSchema = new mongoose.Schema({
+  title: String,
+  description: String,
+  type: String,
+  url: String
+}, { timestamps: true });
+
+const Media = mongoose.model("Media", mediaSchema);
+
 app.post("/api/media", upload.single("file"), async (req, res) => {
-  try {
-    const result = await cloudinary.uploader.upload(req.file.path, {
-      resource_type: "auto",
-      folder: "media"
-    });
 
-    const media = new Media({
-      title: req.body.title,
-      description: req.body.description,
-      type: req.body.type,
-      url: result.secure_url
-    });
+  const result = await cloudinary.uploader.upload(req.file.path, {
+    resource_type: "auto",
+    folder: "media"
+  });
 
-    await media.save();
+  const media = new Media({
+    title: req.body.title,
+    description: req.body.description,
+    type: req.body.type,
+    url: result.secure_url
+  });
 
-    res.json({ success: true, media });
-  } catch (err) {
-    res.status(500).json({ error: "Upload failed" });
-  }
+  await media.save();
+
+  res.json({ success: true, media });
 });
 
 app.get("/api/media", async (req, res) => {
@@ -181,87 +273,56 @@ app.delete("/api/media/:id", async (req, res) => {
 // ======================================================
 // ===================== BLOG ===========================
 // ======================================================
+const blogSchema = new mongoose.Schema({
+  title: String,
+  description: String,
+  content: String,
+  image: String
+}, { timestamps: true });
+
+const Blog = mongoose.model("Blog", blogSchema);
+
 app.post("/api/blogs", upload.single("image"), async (req, res) => {
-  try {
-    const result = await cloudinary.uploader.upload(req.file.path, {
-      folder: "blogs"
-    });
 
-    const blog = new Blog({
-      title: req.body.title,
-      description: req.body.description,
-      content: req.body.content,
-      image: result.secure_url
-    });
+  const result = await cloudinary.uploader.upload(req.file.path, {
+    folder: "blogs"
+  });
 
-    await blog.save();
+  const blog = new Blog({
+    title: req.body.title,
+    description: req.body.description,
+    content: req.body.content,
+    image: result.secure_url
+  });
 
-    res.json({ success: true, blog });
-  } catch (err) {
-    res.status(500).json({ error: "Blog upload failed" });
-  }
+  await blog.save();
+
+  res.json({ success: true, blog });
 });
 
 app.get("/api/blogs", async (req, res) => {
   res.json(await Blog.find().sort({ createdAt: -1 }));
 });
 
-app.delete("/api/blogs/:id", async (req, res) => {
-  await Blog.findByIdAndDelete(req.params.id);
-  res.json({ success: true });
+// ======================================================
+// ===================== ANNOUNCEMENTS ==================
+// ======================================================
+const announcementSchema = new mongoose.Schema({
+  title: String,
+  message: String,
+  date: { type: Date, default: Date.now }
 });
 
-// ======================================================
-// ===================== ANNOUNCEMENT ===================
-// ======================================================
+const Announcement = mongoose.model("Announcement", announcementSchema);
+
 app.post("/api/announcements", async (req, res) => {
-  const announcement = new Announcement(req.body);
-  await announcement.save();
-  res.json({ success: true, announcement });
+  const a = new Announcement(req.body);
+  await a.save();
+  res.json({ success: true, a });
 });
 
 app.get("/api/announcements", async (req, res) => {
   res.json(await Announcement.find().sort({ date: -1 }));
-});
-
-// ======================================================
-// ===================== LIVE STATE =====================
-// ======================================================
-let liveState = {
-  type: "youtube",
-  youtubeId: "",
-  facebookUrl: "",
-  channel: "main"
-};
-
-app.get("/api/live", (req, res) => {
-  res.json(liveState);
-});
-
-app.post("/api/live", (req, res) => {
-  liveState = {
-    type: req.body.type || "youtube",
-    youtubeId: req.body.youtubeId || "",
-    facebookUrl: req.body.facebookUrl || "",
-    channel: req.body.channel || "main"
-  };
-
-  io.emit("live-update", liveState);
-
-  res.json({ success: true, liveState });
-});
-
-// ======================================================
-// ===================== SOCKET.IO ======================
-// ======================================================
-io.on("connection", (socket) => {
-  console.log("User connected:", socket.id);
-
-  socket.emit("live-update", liveState);
-
-  socket.on("disconnect", () => {
-    console.log("User disconnected:", socket.id);
-  });
 });
 
 // ======================================================
@@ -270,6 +331,7 @@ io.on("connection", (socket) => {
 app.get("/api/health", (req, res) => {
   res.json({
     status: "OK",
+    uptime: process.uptime(),
     time: new Date().toISOString()
   });
 });
@@ -278,7 +340,7 @@ app.get("/api/health", (req, res) => {
 // ===================== ROOT ===========================
 // ======================================================
 app.get("/", (req, res) => {
-  res.send("Server V2 Running Cleanly");
+  res.send("PRO BROADCAST SYSTEM V3 MAX RUNNING");
 });
 
 // ======================================================
@@ -287,5 +349,5 @@ app.get("/", (req, res) => {
 const PORT = process.env.PORT || 3000;
 
 server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`PRO BROADCAST V3 MAX RUNNING ON ${PORT}`);
 });
