@@ -1751,17 +1751,17 @@ app.get("/api/health", (req, res) => {
 
 
 
-
-
-
-
-
 const http = require("http");
 const { Server } = require("socket.io");
 
 
 
+
+/* ================= HTTP SERVER ================= */
+
 const server = http.createServer(app);
+
+/* ================= SOCKET.IO ================= */
 
 const io = new Server(server, {
     cors: {
@@ -1770,111 +1770,208 @@ const io = new Server(server, {
     }
 });
 
-app.use(cors());
-app.use(express.json());
+/* ================= MIDDLEWARE ================= */
+
+
+
+/* ================= CONFIG ================= */
+
+/* 🔥 YOUR YOUTUBE CHANNEL ID */
+const CHANNEL_ID = "UC450v4_ksQH3IeLwNKlm5tQ";
+
+/* 🔥 YOUR YOUTUBE API KEY */
+const API_KEY = "AIzaSyByFnFaXSO_LjTN0dPiPwy8St8ivn5HACg";
 
 /* ================= STREAM STATE ================= */
 
-let streamSources = {
-    youtube: null,
-    facebook: null,
-    twitch: null,
-    manual: null
-};
+let currentStream = null;
 
-let activeSource = null;
-
-/* ================= ACTIVE STREAM PICKER ================= */
-
-function getActiveStream(){
-
-    if(streamSources.youtube){
-        activeSource = "youtube";
-        return streamSources.youtube;
-    }
-
-    if(streamSources.facebook){
-        activeSource = "facebook";
-        return streamSources.facebook;
-    }
-
-    if(streamSources.twitch){
-        activeSource = "twitch";
-        return streamSources.twitch;
-    }
-
-    if(streamSources.manual){
-        activeSource = "manual";
-        return streamSources.manual;
-    }
-
-    activeSource = null;
-    return null;
-}
-
-/* ================= SOCKET ================= */
+/* ================= SOCKET CONNECTION ================= */
 
 io.on("connection", (socket) => {
 
-    console.log("🟢 Connected:", socket.id);
+    console.log("🟢 User connected:", socket.id);
 
-    socket.emit("stream-update", {
-        videoId: getActiveStream(),
-        source: activeSource
+    /* SEND CURRENT STREAM TO NEW USERS */
+
+    if(currentStream){
+
+        console.log("📡 Sending existing stream");
+
+        socket.emit("stream-update", currentStream);
+    }
+
+    /* ================= TAKE LIVE ================= */
+
+    socket.on("take-live", (videoId) => {
+
+        console.log("🔴 TAKE LIVE:", videoId);
+
+        currentStream = videoId;
+
+        /* SEND STREAM TO ALL RECEIVERS */
+
+        io.emit("stream-update", videoId);
     });
 
-    socket.on("set-stream-source", (data) => {
+    /* ================= STOP LIVE ================= */
 
-        // data: { type, videoId }
-        streamSources[data.type] = data.videoId;
+    socket.on("stop-live", () => {
 
-        console.log("🎛 Source updated:", data);
+        console.log("⛔ STOP LIVE");
 
-        io.emit("stream-update", {
-            videoId: getActiveStream(),
-            source: activeSource
-        });
+        currentStream = null;
+
+        io.emit("stream-stop");
     });
 
-    socket.on("update-lower-third", (data) => {
+    /* ================= DISCONNECT ================= */
 
-        io.emit("lower-third-update", data);
-    });
+    socket.on("disconnect", () => {
 
-    socket.on("stop-all", () => {
-
-        streamSources = {
-            youtube: null,
-            facebook: null,
-            twitch: null,
-            manual: null
-        };
-
-        io.emit("stream-update", {
-            videoId: null,
-            source: null
-        });
-    });
-});
-
-/* ================= API ================= */
-
-app.get("/api/detect-live", (req, res) => {
-
-    res.json({
-        videoId: getActiveStream(),
-        source: activeSource,
-        status: activeSource ? "live" : "standby"
+        console.log("⚫ User disconnected:", socket.id);
     });
 });
 
-/* ================= SERVER ================= */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* ================= LIVE DETECTION API ================= */
+
+app.get("/api/detect-live", async (req, res) => {
+
+    try {
+
+        console.log("📡 Checking YouTube live stream...");
+
+        const url =
+        `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${CHANNEL_ID}&eventType=live&type=video&key=${API_KEY}`;
+
+        /* FETCH FROM YOUTUBE */
+
+        const response = await fetch(url);
+
+        const data = await response.json();
+
+        console.log("📡 YouTube API Response:", data);
+
+        /* NO LIVE STREAM */
+
+        if(!data.items || data.items.length === 0){
+
+            return res.json({
+                videoId: null
+            });
+        }
+
+        /* LIVE FOUND */
+
+        const videoId = data.items[0].id.videoId;
+
+        console.log("🟢 LIVE FOUND:", videoId);
+
+        return res.json({
+            videoId
+        });
+
+    } catch(err){
+
+        console.error("❌ DETECT LIVE ERROR:", err);
+
+        return res.status(500).json({
+            error: err.message
+        });
+    }
+});
+
+
+
+
+
+
+
+
+
+
+/* ================= TEST ROUTE ================= */
+
+app.get("/", (req, res) => {
+
+    res.send("🎛 Control Room Backend Running");
+});
+
+/* ================= START SERVER ================= */
 
 const PORT = process.env.PORT || 3000;
 
 server.listen(PORT, () => {
-    console.log("🚀 Server running on port", PORT);
+
+    console.log(`🚀 Server running on port ${PORT}`);
 });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
