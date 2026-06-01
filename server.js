@@ -289,6 +289,29 @@ app.get("/api/blogs", async (req, res) => {
 });
 
 
+  app.put("/api/blogs/:id", async (req, res) => {
+  try {
+
+    const updated = await Blog.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true }
+    );
+
+    if (!updated) {
+      return res.status(404).json({ error: "Blog not found" });
+    }
+
+    res.json({
+      success: true,
+      updated
+    });
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ===================== BLOG DELETE =====================
 app.delete("/api/blogs/:id", async (req, res) => {
   try {
