@@ -173,6 +173,31 @@ app.get("/api/sermons", async (req, res) => {
   res.json(await Sermon.find().sort({ createdAt: -1 }));
 });
 
+// ===================== SERMON DELETE =====================
+app.delete("/api/sermons/:id", async (req, res) => {
+  try {
+    await Sermon.findByIdAndDelete(req.params.id);
+    res.json({ success: true, message: "Sermon deleted" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ===================== SERMON UPDATE =====================
+app.put("/api/sermons/:id", async (req, res) => {
+  try {
+    const updated = await Sermon.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true }
+    );
+
+    res.json({ success: true, updated });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ===================== MEDIA =====================
 const mediaSchema = new mongoose.Schema({
   title: String,
@@ -204,6 +229,31 @@ app.post("/api/media", upload.single("file"), async (req, res) => {
 
 app.get("/api/media", async (req, res) => {
   res.json(await Media.find().sort({ createdAt: -1 }));
+});
+
+// ===================== MEDIA DELETE =====================
+app.delete("/api/media/:id", async (req, res) => {
+  try {
+    await Media.findByIdAndDelete(req.params.id);
+    res.json({ success: true, message: "Media deleted" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ===================== MEDIA UPDATE =====================
+app.put("/api/media/:id", async (req, res) => {
+  try {
+    const updated = await Media.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true }
+    );
+
+    res.json({ success: true, updated });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ===================== BLOG =====================
@@ -238,6 +288,31 @@ app.get("/api/blogs", async (req, res) => {
   res.json(await Blog.find().sort({ createdAt: -1 }));
 });
 
+
+// ===================== BLOG DELETE =====================
+app.delete("/api/blogs/:id", async (req, res) => {
+  try {
+    await Blog.findByIdAndDelete(req.params.id);
+    res.json({ success: true, message: "Blog deleted" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ===================== BLOG UPDATE =====================
+app.put("/api/blogs/:id", async (req, res) => {
+  try {
+    const updated = await Blog.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true }
+    );
+
+    res.json({ success: true, updated });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 // ===================== ANNOUNCEMENTS =====================
 const announcementSchema = new mongoose.Schema({
   title: String,
@@ -255,6 +330,31 @@ app.post("/api/announcements", async (req, res) => {
 
 app.get("/api/announcements", async (req, res) => {
   res.json(await Announcement.find().sort({ date: -1 }));
+});
+
+// ===================== ANNOUNCEMENT DELETE =====================
+app.delete("/api/announcements/:id", async (req, res) => {
+  try {
+    await Announcement.findByIdAndDelete(req.params.id);
+    res.json({ success: true, message: "Announcement deleted" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ===================== ANNOUNCEMENT UPDATE =====================
+app.put("/api/announcements/:id", async (req, res) => {
+  try {
+    const updated = await Announcement.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true }
+    );
+
+    res.json({ success: true, updated });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ===================== ROOT =====================
