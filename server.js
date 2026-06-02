@@ -257,85 +257,156 @@ app.put("/api/media/:id", async (req, res) => {
 });
 
 // ===================== BLOG =====================
+
+
+// ===================== BLOG =====================
+
 const blogSchema = new mongoose.Schema({
   title: String,
   description: String,
   content: String,
-  image: String
+  image: String,
+  likes: { type: Number, default: 0 }   // ✅ added safely
 }, { timestamps: true });
 
 const Blog = mongoose.model("Blog", blogSchema);
 
+// ===================== CREATE BLOG =====================
+
 app.post("/api/blogs", upload.single("image"), async (req, res) => {
 
-  const result = await cloudinary.uploader.upload(req.file.path, {
-    folder: "blogs"
-  });
-
-  const blog = new Blog({
-    title: req.body.title,
-    description: req.body.description,
-    content: req.body.content,
-    image: result.secure_url
-  });
-
-  await blog.save();
-
-  res.json({ success: true, blog });
-});
-
-app.get("/api/blogs", async (req, res) => {
-  res.json(await Blog.find().sort({ createdAt: -1 }));
-});
-
-
-  app.put("/api/blogs/:id", async (req, res) => {
   try {
 
-    const updated = await Blog.findByIdAndUpdate(
+    const result = await cloudinary.uploader.upload(req.file.path, {
+      folder: "blogs"
+    });
+
+    const blog = new Blog({
+      title: req.body.title,
+      description: req.body.description,
+      content: req.body.content,
+      image: result.secure_url
+    });
+
+    await blog.save();
+
+    res.json({ success: true, blog });
+
+  } catch (err) {
+    res.status(500).json({ error: "Failed to create blog" });
+  }
+
+});
+
+// ===================== GET BLOGS =====================
+
+app.get("/api/blogs", async (req, res) => {
+
+  try {
+
+    const blogs = await Blog.find().sort({ createdAt: -1 });
+    res.json(blogs);
+
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch blogs" });
+  }
+
+});
+
+// ===================== UPDATE BLOG =====================
+
+app.put("/api/blogs/:id", async (req, res) => {
+
+  try {
+
+    const blog = await Blog.findByIdAndUpdate(
       req.params.id,
-      req.body,
+      {
+        title: req.body.title,
+        description: req.body.description,
+        content: req.body.content
+      },
       { new: true }
     );
 
-    if (!updated) {
+    res.json({ success: true, blog });
+
+  } catch (err) {
+    res.status(500).json({ error: "Failed to update blog" });
+  }
+
+});
+
+// ===================== DELETE BLOG =====================
+
+app.delete("/api/blogs/:id", async (req, res) => {
+
+  try {
+
+    await Blog.findByIdAndDelete(req.params.id);
+
+    res.json({ success: true });
+
+  } catch (err) {
+    res.status(500).json({ error: "Failed to delete blog" });
+  }
+
+});
+
+// ===================== LIKE BLOG =====================
+
+app.post("/api/blogs/:id/like", async (req, res) => {
+
+  try {
+
+    const blog = await Blog.findById(req.params.id);
+
+    if (!blog) {
       return res.status(404).json({ error: "Blog not found" });
     }
 
+    blog.likes = (blog.likes || 0) + 1;
+
+    await blog.save();
+
     res.json({
       success: true,
-      updated
+      likes: blog.likes
     });
 
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: "Like failed" });
   }
+
 });
 
-// ===================== BLOG DELETE =====================
-app.delete("/api/blogs/:id", async (req, res) => {
+// ===================== SHARE BLOG (LINK GENERATOR ONLY) =====================
+// NOTE: No DB change needed — just returns share link
+
+app.get("/api/blogs/:id/share", async (req, res) => {
+
   try {
-    await Blog.findByIdAndDelete(req.params.id);
-    res.json({ success: true, message: "Blog deleted" });
+
+    const blog = await Blog.findById(req.params.id);
+
+    if (!blog) {
+      return res.status(404).json({ error: "Blog not found" });
+    }
+
+    const link = `https://tmi-backend-1.onrender.com/blog/${blog._id}`;
+
+    res.json({
+      success: true,
+      link
+    });
+
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: "Share failed" });
   }
+
 });
 
-// ===================== BLOG UPDATE =====================
-app.put("/api/blogs/:id", async (req, res) => {
-  try {
-    const updated = await Blog.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true }
-    );
 
-    res.json({ success: true, updated });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
 // ===================== ANNOUNCEMENTS =====================
 const announcementSchema = new mongoose.Schema({
   title: String,
