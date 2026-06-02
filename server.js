@@ -259,14 +259,24 @@ app.put("/api/media/:id", async (req, res) => {
 // ===================== BLOG =====================
 
 
-// ===================== BLOG =====================
+  // ===================== BLOG =====================
 
 const blogSchema = new mongoose.Schema({
   title: String,
   description: String,
   content: String,
   image: String,
-  likes: { type: Number, default: 0 }   // ✅ added safely
+
+  likes: { type: Number, default: 0 },
+
+  comments: [
+    {
+      name: String,
+      message: String,
+      date: { type: Date, default: Date.now }
+    }
+  ]
+
 }, { timestamps: true });
 
 const Blog = mongoose.model("Blog", blogSchema);
@@ -303,10 +313,8 @@ app.post("/api/blogs", upload.single("image"), async (req, res) => {
 app.get("/api/blogs", async (req, res) => {
 
   try {
-
     const blogs = await Blog.find().sort({ createdAt: -1 });
     res.json(blogs);
-
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch blogs" });
   }
@@ -380,10 +388,9 @@ app.post("/api/blogs/:id/like", async (req, res) => {
 
 });
 
-// ===================== SHARE BLOG (LINK GENERATOR ONLY) =====================
-// NOTE: No DB change needed — just returns share link
+// ===================== ADD COMMENT =====================
 
-app.get("/api/blogs/:id/share", async (req, res) => {
+app.post("/api/blogs/:id/comment", async (req, res) => {
 
   try {
 
@@ -393,38 +400,25 @@ app.get("/api/blogs/:id/share", async (req, res) => {
       return res.status(404).json({ error: "Blog not found" });
     }
 
-    const link = `https://tmi-backend-1.onrender.com/blog/${blog._id}`;
+    blog.comments.push({
+      name: req.body.name,
+      message: req.body.message
+    });
+
+    await blog.save();
 
     res.json({
       success: true,
-      link
+      comments: blog.comments
     });
 
   } catch (err) {
-    res.status(500).json({ error: "Share failed" });
+    res.status(500).json({ error: "Comment failed" });
   }
 
 });
 
 
-// ===================== ANNOUNCEMENTS =====================
-const announcementSchema = new mongoose.Schema({
-  title: String,
-  message: String,
-  date: { type: Date, default: Date.now }
-});
-
-const Announcement = mongoose.model("Announcement", announcementSchema);
-
-app.post("/api/announcements", async (req, res) => {
-  const a = new Announcement(req.body);
-  await a.save();
-  res.json({ success: true, a });
-});
-
-app.get("/api/announcements", async (req, res) => {
-  res.json(await Announcement.find().sort({ date: -1 }));
-});
 
 // ===================== ANNOUNCEMENT DELETE =====================
 app.delete("/api/announcements/:id", async (req, res) => {
