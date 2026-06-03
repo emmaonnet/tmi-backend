@@ -199,65 +199,184 @@ app.put("/api/sermons/:id", async (req, res) => {
 });
 
 // ===================== MEDIA =====================
-const mediaSchema = new mongoose.Schema({
+
+  const mongoose = require("mongoose");
+
+/* =========================
+   MEDIA MODEL
+========================= */
+const MediaSchema = new mongoose.Schema({
   title: String,
-  description: String,
-  type: String,
-  url: String
+
+  type: {
+    type: String,
+    enum: ["video", "image"],
+    required: true
+  },
+
+  imageUrl: String,
+  videoUrl: String,
+  thumbnail: String,
+
+  category: String,
+  featured: { type: Boolean, default: false },
+
+  likes: { type: Number, default: 0 },
+  views: { type: Number, default: 0 },
+
+  comments: [
+    {
+      name: String,
+      message: String,
+      date: { type: Date, default: Date.now }
+    }
+  ]
+
 }, { timestamps: true });
 
-const Media = mongoose.model("Media", mediaSchema);
+const Media = mongoose.model("Media", MediaSchema);
 
-app.post("/api/media", upload.single("file"), async (req, res) => {
-
-  const result = await cloudinary.uploader.upload(req.file.path, {
-    resource_type: "auto",
-    folder: "media"
-  });
-
-  const media = new Media({
-    title: req.body.title,
-    description: req.body.description,
-    type: req.body.type,
-    url: result.secure_url
-  });
-
-  await media.save();
-
-  res.json({ success: true, media });
-});
-
+/* =========================
+   GET ALL MEDIA
+========================= */
 app.get("/api/media", async (req, res) => {
-  res.json(await Media.find().sort({ createdAt: -1 }));
-});
-
-// ===================== MEDIA DELETE =====================
-app.delete("/api/media/:id", async (req, res) => {
   try {
-    await Media.findByIdAndDelete(req.params.id);
-    res.json({ success: true, message: "Media deleted" });
+    const media = await Media.find().sort({ createdAt: -1 });
+    res.json(media);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// ===================== MEDIA UPDATE =====================
+/* =========================
+   CREATE MEDIA (ADMIN UPLOAD)
+========================= */
+app.post("/api/media", async (req, res) => {
+  try {
+    const media = new Media(req.body);
+    await media.save();
+    res.json(media);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/* =========================
+   UPDATE MEDIA (ADMIN)
+========================= */
 app.put("/api/media/:id", async (req, res) => {
   try {
+    const media = await Media.findById(req.params.id);
+
+    if (!media) {
+      return res.status(404).json({ error: "Media not found" });
+    }
+
     const updated = await Media.findByIdAndUpdate(
       req.params.id,
       req.body,
       { new: true }
     );
 
-    res.json({ success: true, updated });
+    res.json(updated);
+
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// ===================== BLOG =====================
+/* =========================
+   DELETE MEDIA (ADMIN)
+========================= */
+app.delete("/api/media/:id", async (req, res) => {
+  try {
+    const media = await Media.findById(req.params.id);
 
+    if (!media) {
+      return res.status(404).json({ error: "Media not found" });
+    }
+
+    await Media.findByIdAndDelete(req.params.id);
+
+    res.json({
+      success: true,
+      message: "Media deleted successfully",
+      deletedId: req.params.id
+    });
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/* =========================
+   LIKE MEDIA
+========================= */
+app.post("/api/media/:id/like", async (req, res) => {
+  try {
+    const media = await Media.findById(req.params.id);
+
+    if (!media) {
+      return res.status(404).json({ error: "Media not found" });
+    }
+
+    media.likes += 1;
+    await media.save();
+
+    res.json({ likes: media.likes });
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/* =========================
+   INCREASE VIEWS
+========================= */
+app.post("/api/media/:id/view", async (req, res) => {
+  try {
+    const media = await Media.findById(req.params.id);
+
+    if (!media) {
+      return res.status(404).json({ error: "Media not found" });
+    }
+
+    media.views += 1;
+    await media.save();
+
+    res.json({ views: media.views });
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/* =========================
+   ADD COMMENT
+========================= */
+app.post("/api/media/:id/comment", async (req, res) => {
+  try {
+    const media = await Media.findById(req.params.id);
+
+    if (!media) {
+      return res.status(404).json({ error: "Media not found" });
+    }
+
+    const comment = {
+      name: req.body.name,
+      message: req.body.message
+    };
+
+    media.comments.push(comment);
+    await media.save();
+
+    res.json(media.comments);
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+    
 
   // ===================== BLOG =====================
 
