@@ -200,7 +200,7 @@ app.put("/api/sermons/:id", async (req, res) => {
 
 // ===================== MEDIA =====================
 
-  const mongoose = require("mongoose");
+  
 
 /* =========================
    MEDIA MODEL
